@@ -1,0 +1,151 @@
+<!-- <div data-simplebar class="h-100">
+
+    <!--- Sidemenu -->
+    <div id="sidebar-menu">
+        <!-- Left Menu Start -->
+        <ul class="metismenu list-unstyled" id="side-menu">
+            <li>
+                <a href="" class="waves-effect">
+                    <i class="bx bx-home-circle"></i><span class="badge rounded-pill bg-info float-end"></span>
+                    <span key="t-dashboards">Menu</span>
+                </a>
+
+            </li>
+        <li class="menu-title" key="t-menu">Menu</li>
+
+            <li>
+                <a href="{% url 'index_view' %}" class="waves-effect">
+                    <i class="bx bx-home-circle"></i><span class="badge rounded-pill bg-info float-end"></span>
+                    <span key="t-dashboards">Create Workspace</span>
+                </a>
+
+            </li>
+          {% comment %} <li>
+                <a href="{% url 'data_stream' %}" class="waves-effect">
+                    <i class="bx bx-home-circle"></i><span class="badge rounded-pill bg-info float-end"></span>
+                    <span key="t-dashboards">Data Stream</span>
+                </a>
+
+            </li> {% endcomment %}
+              {% comment %} 
+            <li>
+                <a href="{% url 'dashborad' %}" class="waves-effect">
+                    <i class="bx bx-home-circle"></i><span class="badge rounded-pill bg-info float-end"></span>
+                    <span key="t-dashboards">create dashboard</span>
+                </a>
+
+            </li> {% endcomment %}
+        </li>
+       
+
+   </ul>  
+            {% comment %} <li>
+                <a href="javascript: void(0);" class="has-arrow waves-effect">
+                    <i class="bx bx-layout"></i>
+                    <span key="t-layouts">Allower</span>
+                </a>
+                <ul class="sub-menu" aria-expanded="true">
+                    
+                    <li>
+                         <a href="{% url 'PrimaryRequestHandlingMethod' %}" key="t-horizontal" class="waves-effect">
+                            <i class="bx bx-file"></i>
+                           <span key="t-file-manager">የታዘዙ ስራዎች</span>
+                        </a>
+                        
+                        <a href="{% url 'CompletedTaskHandlingMethod' %}" key="t-horizontal" class="waves-effect">
+                            <i class="bx bx-file"></i>
+                           <span key="t-file-manager">የተመሩ ስራዎች</span>
+                        </a>
+                        
+                    </li>
+                </ul>
+            </li>
+            
+            <li class="menu-title" key="t-apps"></li>
+            {%if request.user.user_role == "admin" %}
+
+            <li>
+                <a href="javascript: void(0);" class="has-arrow waves-effect">
+                    <i class="bx bx-task"></i>
+                    <span key="t-tasks">User Manager</span>
+                </a>
+
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'add_user' %}" key="t-task-list">Add New User</a></li>
+
+                </ul>
+            </li>
+            {% endif %}
+            {%if request.user.user_role == "manager" or request.user.user_role == "dataEncoder"%}
+            <li>
+                <a href="javascript: void(0);" class="has-arrow waves-effect">
+                    <i class="bx bx-task"></i>
+                    <span key="t-tasks">Activity</span>
+                </a>
+               
+                
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'activity_list' %}" key="t-task-list">Activity View</a></li>
+
+                </ul>
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'activity_create' %}" key="t-task-list">Create Activity</a></li>
+                </ul>
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'bulk_activity_import' %}" key="t-task-list">Import Activities</a></li>
+
+                </ul>
+                {%if request.user.user_role != "dataEncoder"%}
+
+                    
+                    <ul class="sub-menu" aria-expanded="false">
+                        <li><a href="{% url 'activity_group' %}" key="t-task-list">Activity Group</a></li>
+
+                    </ul>
+                {% endif %}
+            
+              
+            </li>
+            {% endif %}
+            {%if request.user.user_role == "manager"%}
+            <li>
+                <a href="javascript: void(0);" class="has-arrow waves-effect">
+                    <i class="bx bx-task"></i>
+                    <span key="t-tasks">Target</span>
+                </a>
+                {%if request.user.user_role == "manager" %}
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'group_create' %}" key="t-task-list">Create Target Group</a></li>
+                </ul>
+
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'group_list' %}" key="t-task-list">Target Group View</a></li>
+                </ul>
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'target_create' %}" key="t-task-list">Create Target</a></li>
+                </ul>
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'import_target' %}" key="t-task-list">Import Targets</a></li>
+                </ul>
+                <ul class="sub-menu" aria-expanded="false">
+                    <li><a href="{% url 'target_list' %}" key="t-task-list">Target View</a></li>
+                </ul>
+                {% endif %}
+                
+
+                
+                
+            </li>
+            {% endif %}
+            {%if request.user.user_role == "manager" or request.user.user_role == "viewer"%}
+            <li class="side-nav-item">
+                <a data-bs-toggle="collapse" href="{% url 'tree' %}" aria-expanded="false" aria-controls="sidebarMaps" class="side-nav-link">
+                    <i class="uil-location-point"></i>
+                    <span> Maps </span>
+                    <span class="menu-arrow"></span>
+                </a>
+              {% endcomment %} 
+          
+    </div>
+    <!-- Sidebar -->
+</div> -->

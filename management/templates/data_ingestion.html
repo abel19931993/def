@@ -1,0 +1,240 @@
+{% extends 'base.html'%} {% load static %} {% block content %}
+
+<div class="row">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-body">
+      
+          
+          <form class="outer-repeater id="requesterForm" action="{% url 'data_add' %}" method="post"  enctype="multipart/form-data">
+              {% csrf_token %}
+            <div data-repeater-list="outer-group" class="outer">
+                <div class="mb-3 row">
+                    <div class="row justify-content-end">
+                        <div class="col-sm-9">
+
+                            
+                                 <h2 >Input Part</h2>
+                            
+                        </div>
+                    </div>
+
+                
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Database Type</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" name="database_type" id="database_type">
+                            <option value="mysql">mysql</option>
+                            <option value="false">postgresql</option>
+                        </select>
+                        
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Connection String</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="con_string" placeholder="SELECT * FROM %s WHERE updated_at > :sql_last_value">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">User</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="user">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Password</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="pass">
+                    </div>
+                </div>
+               
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Schedule</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="schedule">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Statment</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="statment">
+                    </div>
+                </div>
+               
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Jdbc_paging_enabled</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" name="jdbc_paging" id="jdbc_paging">
+                            <option value="true">True</option>
+                            <option value="false">false</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Jdbc_page_size</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="jdbc_page_size">
+                    </div>
+                </div>
+                <div data-repeater-item="" class="outer">
+                   
+                    <div class="mb-3 row">
+                        <div class="row justify-content-end">
+                            <div class="col-sm-9">
+
+                                
+                                     <h2 >Filter Part</h2>
+                                
+                            </div>
+                        </div>
+
+                    
+                    </div>
+                  
+                
+                    <div class="inner-repeater mb-4">
+                        <div data-repeater-list="inner-group" class="inner mb-3">
+                        
+                          
+                          <div data-repeater-item="" class="inner mb-3 row" >
+                            <div class="col-md-2 col-8">
+                                    <label for="example-search-input" class="col-md-12 col-form-label">Column Name </label>
+                                    <div class="col-md-12">
+                                        <input type="text" id="col_name" name="col_name" class="form-control"/>
+                                    </div> 
+                               
+                            </div>
+                            <div class="col-md-2 col-8">
+                       
+                                <label for="example-search-input" class="col-md-12 col-form-label">Rename </label>
+                                <div class="col-md-12">
+                                    <input type="text" id="rename" name="rename" class="form-control"/>
+                                </div>
+                   
+                        </div>
+                        <div class="col-md-2 col-8">
+                          
+                            <label for="example-search-input" class="col-md-12 col-form-label">Type </label>
+                            <div class="col-md-12">
+                                <select class="form-select"  name="type" id="type">
+                                    <option value="date">date</option>
+                                
+                                </select>
+                            </div>
+                         
+                          
+              
+                        </div>
+                        <div class="col-md-2 col-8">
+                          
+                            <label for="example-search-input" class="col-md-12 col-form-label">Convert </label>
+                            <div class="col-md-12">
+                                <select class="form-select"  name="convert" id="convert">
+                                    <option value="integer">integer</option>
+                                    <option  value="float">float</option>
+                                    <option  value="string">string</option>
+                                    <option  value="boolean">boolean</option>
+                                </select>
+                            </div>
+          
+                    </div>
+                            <div class="col-md-2 col-4">
+                          
+                                <label for="example-search-input" class="col-md-5 col-form-label">Gsub </label>
+                                <div class="col-md-5">
+                                    <input type="hidden" name="gsub" value="false"> 
+                                    <input class="form-check-input" type="checkbox" id="gsub" name="gsub" value="true">
+                                </div>
+              
+                            </div>
+                            
+                           
+                            <div class="col-md-2 col-8">
+                                <label for="example-search-input" class="col-md-12 col-form-label">""</label>
+                              <div class="d-grid">
+                                <input
+                                  data-repeater-delete=""
+                                  
+                                  type="button"
+                                  class="btn btn-primary inner"
+                                  value="Delete"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mb-3 row">
+                          
+                            <div class="col-md-10">
+                                <input
+                          data-repeater-create=""
+                          style="margin-left: 250px"
+                          type="button"
+                          class="btn btn-success inner"
+                          value="Add More"
+                        />
+                            </div>
+                        </div>
+                       
+                      </div>
+                </div>
+              
+                <div class="mb-3 row">
+                    <div class="row justify-content-end">
+                        <div class="col-sm-9">
+
+                            
+                                 <h2 >Output Part</h2>
+                            
+                        </div>
+                    </div>
+
+                
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Elaticsearch Hosts</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="elastic_hosts">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Elaticsearch index</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="elastic_index">
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Elaticsearch user</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="elastic_user">
+                    </div>
+                </div>
+               
+                <div class="row mb-4">
+                    <label for="horizontal-filepath-input" class="col-sm-3 col-form-label">Elaticsearch Password</label>
+                    <div class="col-sm-9">
+                      <input type="text" class="form-control" id="horizontal-filepath-input"  name="elastic_pass">
+                    </div>
+                </div>
+        </div>
+        <div class="row justify-content-end">
+            <div class="col-sm-9">
+
+               
+
+                <div>
+                    <button type="submit" class="btn btn-primary w-md">Submit</button>
+                </div>
+            </div>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+
+ 
+
+  {% endblock %}

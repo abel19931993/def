@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-body">
+                <form action="{% url 'create_data_view' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row mb-4">
+                        <label for="workspace_name" class="col-sm-6 col-form-label"><h3>Select timestamp filed</h3></label>
+                    </div> 
+                    <div class="row">
+                        <div class="col-sm-6">
+                           
+
+                            <div class="row mb-4">
+                                <label for="formFile" class="col-sm-3 col-form-label">Timestamp field</label>
+                                <div class="col-sm-9">
+                                    <select id="columnSelect" name="time-field-name" class="form-control mt-2 ">
+                                    {% for field in fields %}
+                                        <option value="{{ field }}">{{ field }}</option>
+                                    {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                        
+                        </div>
+                       
+                    </div>    
+                    <div class="row mb-4">
+                        <div class="col-sm-9 offset-sm-3">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        </div>
+                    </div> 
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

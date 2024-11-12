@@ -1,0 +1,254 @@
+import csv
+import requests
+from datetime import datetime
+
+
+
+def list_fields_and_types(selected_index):
+    """
+    List all the fields of the selected index
+
+    Parameter:
+    - selected_index: selected index name
+
+     Returns:
+    - known_fields: List of fields with there type for selected index .
+    """
+    response = requests.get(f'http://192.168.5.175:9200/{selected_index}/_mapping')
+    
+    if response.status_code == 200:
+        mapping = response.json()
+        index_mapping = mapping.get(selected_index, {})
+        properties = index_mapping.get('mappings', {}).get('properties', {})
+
+        print(f"Fields and Types in Index '{selected_index}':")
+        known_fields = []  
+
+        def traverse_fields(fields, parent_field=""):
+            for field, attributes in fields.items():
+                full_field_name = f"{parent_field}.{field}" if parent_field else field
+                field_type = attributes.get('type', 'object')
+
+                if field_type != 'object':
+                    known_fields.append(full_field_name)
+
+                if field_type == 'object' and 'properties' in attributes:
+                    traverse_fields(attributes['properties'], full_field_name)
+
+        if properties:
+            traverse_fields(properties)
+
+            if known_fields:
+                for idx, field in enumerate(known_fields):
+                    print(f"{idx + 1}: {field}")
+                return known_fields
+            else:
+                print("No fields with known types found in the selected index.")
+                return []
+        else:
+            print("No fields found in the selected index.")
+            return []
+    else:
+        print(f"Failed to retrieve mappings for index '{selected_index}'. HTTP Status Code: {response.status_code}")
+        return []
+    
+# Step 5: Select fields 
+def select_fields(known_fields):
+    """
+    Choose from listed fields of selected index 
+
+    Parameter:
+    - known_fields: list of fields
+
+    Returns:
+    - selected_fields: select multiple fields.
+    
+    """
+    
+    selected_fields = []
+    while True:
+        for idx, field in enumerate(known_fields, start=1):
+            print(f"{idx}. {field}")
+        choices = input("Select fields by numbers (comma-separated, or 'done' to finish): ").strip()
+        
+        if choices.lower() == '':
+            break
+
+        try:
+            indices = [int(choice) - 1 for choice in choices.split(',')]
+            for index in indices:
+                if 0 <= index < len(known_fields) and known_fields[index] not in selected_fields:
+                    selected_fields.append(known_fields[index])
+                else:
+                    print(f"Invalid choice: {index + 1}. Please select a valid field number.")
+        except ValueError:
+            print("Invalid input. Please enter numbers separated by commas.")
+
+    return selected_fields
+
+    
+
+# Step 6: Input filter values
+def input_filter_values():
+    """
+    Prompt the user to input filter values either manually or through a CSV file.
+    
+    Returns:
+    - A dictionary mapping fields to their filter values.
+    """
+    input_choice = input("Do you want to manually input the filter list or use a CSV file? (Enter 'manual' or 'csv'): ").strip().lower()
+    
+    filters_map = {}
+
+    if input_choice == 'csv':
+        csv_file_path = input("Please enter the CSV file location: ")
+        
+        try:
+            with open(csv_file_path, newline='') as csvfile:
+                reader = csv.reader(csvfile)
+                headers = next(reader)  # Get the first row as headers
+                for row in reader:
+                    if row:  # Check if the row is not empty
+                        for i, value in enumerate(row):
+                            field = headers[i] if i < len(headers) else f"field_{i}"
+                            if field in filters_map:
+                                filters_map[field].append(value)
+                            else:
+                                filters_map[field] = [value]  # Create a new list for the field
+        except FileNotFoundError:
+            print(f"Error: The file at {csv_file_path} was not found.")
+            return {}  # Return an empty dict if the file is not found
+    
+    elif input_choice == 'manual':
+        print("Enter the filter values for manual input (press Enter without typing to finish):")
+        while True:
+            field = input("Enter field name: ")
+            if field == '':
+                break
+            value = input(f"Enter filter value for '{field}': ")
+            if field in filters_map:
+                filters_map[field].append(value)
+            else:
+                filters_map[field] = [value]  # Create a new list for the field
+    
+    else:
+        print("Invalid choice. Please enter 'manual' or 'csv'.")
+        exit() 
+    # print(filters_map)
+    return filters_map
+
+
+# Step 7: terms query 
+def create_filter_body(filter_list, field):
+    """
+    Iterate over filter_list items, then Check if the filter_field is in field and Add terms filters.
+
+    Parameter: 
+    - filter_list: A dictionary mapping fields to their filter values.
+    - field: Selected fields.
+
+    Returns:
+    - filter_should: Create terms query with the matched field and values.
+
+    """
+    filter_should =[]
+    common_str = "combined_docs.source."
+    for filter_field, values in filter_list.items():
+        if filter_field in field:
+            if values:
+                for value in values:
+                    if value and value.strip():
+                        filter_should.append(
+                            {
+                                "terms": {
+                                    filter_field: [value]
+                                }
+                            }
+                        )
+            else:
+                print(f"Skipping {filter_field} due to empty values.")
+        
+        else:
+            modified_filter_field = common_str + filter_field
+            if modified_filter_field in field:
+                if values:
+                    for value in values:
+                        if value and value.strip():
+                            filter_should.append(
+                                {
+                                    "terms": {
+                                        modified_filter_field: [value]
+                                    }
+                                }
+                            )
+                else:
+                    print(f"Skipping {modified_filter_field} due to empty values.")
+            else:
+                print(f"Neither {filter_field} nor {modified_filter_field} exist in provided field list.")
+    print("inside")
+    print(filter_should) 
+    return filter_should          
+        
+
+# Step 8: Create alias
+def create_alias(selected_index,filter_body, workspace_name):
+    """
+    Create aliases on elastic search
+
+    Parameter: 
+    - selected_index: index name
+    - filter_body: Created terms query
+    - workspace_name: name of created work space
+    """
+    if filter_body:
+        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        alias_name = f"{workspace_name}_{current_timestamp}"
+        print(alias_name)
+        body = {
+            "actions": [
+                {
+                    "add": {
+                        "index": selected_index,
+                        "alias": alias_name,
+                        "filter": {
+                            "bool": {
+                                "should": filter_body
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+
+        response = requests.post('http://192.168.5.175:9200/_aliases', json=body)
+        if response.status_code == 200:
+            print(f"Alias {alias_name} created successfully with filter list!")
+        else:
+            print(f"Failed to create alias. HTTP Status Code: {response.status_code}")
+    else:
+        print("No filter values provided. Alias creation aborted.")
+
+def main():
+    workspace_name = create_workspace()
+    user_indices = list_user_indices()
+    index_name = select_index(user_indices)
+
+    # After selecting index, list the fields and their types
+    if index_name:
+        known_fields = list_fields_and_types(index_name)
+
+        if known_fields:
+            
+            field = select_fields(known_fields)
+
+            if field:
+            
+                filter_list = input_filter_values()
+                filter_body = create_filter_body(filter_list, field)
+
+                # Create the alias based on filter list
+                create_alias(index_name, filter_body, workspace_name)
+
+# Run the main function
+if __name__ == "__main__":
+    main()
