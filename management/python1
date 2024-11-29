@@ -1,254 +1,1038 @@
-import csv
-import requests
-from datetime import datetime
+# # import requests
+# # import json,copy
+# # from elasticsearch import Elasticsearch
+# # import time
+# # import csv
+# # from rest_framework.response import Response
+# # from rest_framework import permissions, status
+# # from django.http import HttpResponse, JsonResponse
+# # from rest_framework import status
+# # from django.contrib.auth.hashers import make_password 
+# # import os
+# # from django.conf import settings
+# # from django.core.files.storage import FileSystemStorage
+# # from rest_framework.decorators import api_view
+# # from rest_framework.response import Response
+# # from rest_framework import status
+# # from .serializers import *
+# # from .permissions import *
+# # from .models import *
+# # from rest_framework.decorators import api_view, permission_classes
+# # from rest_framework.views import APIView
+# # from django.shortcuts import render,redirect
+# # from .serializers import *
+# # from rest_framework.permissions import IsAuthenticated
+# # import uuid
+# # # from elasticsearch.exceptions import ElasticsearchException
+# # from requests.exceptions import RequestException
+# # # Kibana server details
+# # kibana_host = "http://192.168.6.175:5601" 
+# # es_host = "http://192.168.6.175:9200"
+# # headers = {
+# #     'Content-Type': 'application/json',
+# #     'kbn-xsrf': 'true'  # Required header for Kibana API requests
+# # }
 
 
+# #     # Return the result as JSON response
+# # #     return JsonResponse(result, safe=False, json_dumps_params={'indent': 4})
+# # class SystemUserStaffPermission(permissions.BasePermission):
+# #     def has_permission(self, request, view):
+# #         # Check if any of the required permissions are met
+# #         return request.user.is_authenticated and (
+# #            IsAdmin().has_permission(request, view)
+# #         )
+# # workspace_name = None  
+# # alias_name = None
+# # data_view_name = None
+# # dashboard_ids = None
+# # work_type = None
+# # def list_user_indices():
+# #     try:
+# #         response = requests.get('http://192.168.6.175:9200/_cat/indices?v&h=index&format=json', timeout=10)
+# #         response.raise_for_status()
+# #         all_indices = response.json()
+# #         user_indices = [index['index'] for index in all_indices if not index['index'].startswith('.')]
+# #         return user_indices
+# #     except RequestException as e:
+# #         print(f"Error fetching user indices: {e}")
+# #         return []
+# # def get_data_views(auth=None):
+# #     """
+# #     Get all data views from Kibana.
+# #     """
+# #     endpoint = f"{kibana_host}/api/data_views"
+# #     try:
+# #         response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
+# #         response.raise_for_status()
+# #         data_views = response.json().get('data_view', [])
+# #         data_views_info = []
+# #         for data_view in data_views:
+# #             view_info = {
+# #                 'name': data_view.get('name'),
+# #                 'id': data_view.get('id'),
+# #                 'indices': data_view.get('title')
+# #             }
+# #             if not view_info['name'].startswith('.'):
+# #                 data_views_info.append(view_info)
+# #         print("Retrieved data views info successfully.")
+# #         return data_views_info
+# #     except RequestException as e:
+# #         print(f"Failed to retrieve data views: {e}")
+# #         return None
 
-def list_fields_and_types(selected_index):
-    """
-    List all the fields of the selected index
-
-    Parameter:
-    - selected_index: selected index name
-
-     Returns:
-    - known_fields: List of fields with there type for selected index .
-    """
-    response = requests.get(f'http://192.168.5.175:9200/{selected_index}/_mapping')
     
-    if response.status_code == 200:
-        mapping = response.json()
-        index_mapping = mapping.get(selected_index, {})
-        properties = index_mapping.get('mappings', {}).get('properties', {})
+# # def get_data_stream_names():
+# #     try:
+# #         response = requests.get('http://192.168.6.175:9200/_data_stream', timeout=10)
+# #         response.raise_for_status()
+# #         all_data_streams = response.json()
+# #         data_stream_names = [
+# #             ds['name'] for ds in all_data_streams['data_streams'] 
+# #             if not ds.get('system', False)
+# #         ]
+# #         print(data_stream_names)
+# #         return data_stream_names
+# #     except RequestException as e:
+# #         print(f"Error fetching data stream names: {e}")
+# #         return []
 
-        print(f"Fields and Types in Index '{selected_index}':")
-        known_fields = []  
 
-        def traverse_fields(fields, parent_field=""):
-            for field, attributes in fields.items():
-                full_field_name = f"{parent_field}.{field}" if parent_field else field
-                field_type = attributes.get('type', 'object')
+# # # Example usage
+# # kibana_host = "http://192.168.6.175:5601"
+# # template_dashboard_id = "your_template_dashboard_id"  # Replace with the actual template dashboard ID
+# # new_dashboard_title = "My New Dashboard"
+# # new_data_view_id = "your_new_data_view_id"  # Replace with the actual data view ID
+# # auth = ('username', 'password')
+# # def create_workspace(request):
+# #     global workspace_name
+# #     if request.method == 'POST':
+# #         workspace_name = request.POST.get('workspace_name')
+# #         work_type = request.POST.get('work_type')
+# #         print(work_type)
+# #         request.session['workspace_name'] = workspace_name
+# #         request.session['work_type'] = work_type  # Store in session
+# #         time.sleep(1)
+# #         print(f'Workspace Name: {workspace_name}')  # For debugging purposes
+# #     if work_type == 'index':
+# #             # Call the list_user_indices() function to get the supported databases for Indic
+# #             supported_database = list_user_indices()
+# #             # Pass the data to the filter.html template
+# #             return render(request, 'filter.html', context={
+# #                 'supported_database': supported_database,
+# #                 'workspace_name': workspace_name
+# #             })
+# #     elif work_type == 'datastream':
+# #             # Call the get_data_stream_names() function to get the supported databases for Datastream
+# #             supported_database = get_data_stream_names()
+# #             # Pass the data to the data_stream.html template
+# #             return render(request, 'data_stream.html', context={
+# #                 'supported_database': supported_database,
+# #                 'workspace_name': workspace_name
+# #             })
 
-                if field_type != 'object':
-                    known_fields.append(full_field_name)
+# #     else:
+# #             # If the work_type is invalid (not 'indic' or 'datastream')
+# #         return HttpResponse("Invalid work type", status=400)
+# #     return render(request, 'filter.html', context={
+# #         'supported_database': list_user_indices(),
+# #         'workspace_name': workspace_name  # Pass the workspace name to the template
+# #     })
 
-                if field_type == 'object' and 'properties' in attributes:
-                    traverse_fields(attributes['properties'], full_field_name)
+# # def index_view(request):
+# #     print("above index viewwwwwwwwwww")
+# #     print(get_data_views())
+# #     print("inside index viewwwwwwwwwwww")
+# #     # get_all_dashboards(kibana_host)
+# #     tabss = [
+# #     {"id": "tab1", "label": "Tab 1",},
+# #     {"id": "tab2", "label": "Tab 2",},
+# #     {"id": "tab3", "label": "Tab 3", "content": "Content for Tab 3"}
+# # ]
+# #     context = {
+# #             'tabs':  tabss
+# #             # Add more context variables as neededS
+# #             }
+# #     return render(request,'index.html',context)
 
-        if properties:
-            traverse_fields(properties)
+# # # Step 3: Select index
+# # def select_index(request, user_indices):
+# #     print(user_indices)
+# #     try:
+# #         response = requests.get(f'http://192.168.6.175:9200/{user_indices}/_mapping')
+# #         print(response)
+# #         if response.status_code == 200:
+# #             mapping = response.json()
+# #             index_mapping = mapping.get(user_indices, {})
+# #             properties = index_mapping.get('mappings', {}).get('properties', {})
 
-            if known_fields:
-                for idx, field in enumerate(known_fields):
-                    print(f"{idx + 1}: {field}")
-                return known_fields
-            else:
-                print("No fields with known types found in the selected index.")
-                return []
-        else:
-            print("No fields found in the selected index.")
-            return []
-    else:
-        print(f"Failed to retrieve mappings for index '{selected_index}'. HTTP Status Code: {response.status_code}")
-        return []
+# #             print(f"Fields and Types in Index '{user_indices}':")
+# #             known_fields = []  
+
+# #             def traverse_fields(fields, parent_field=""):
+# #                 for field, attributes in fields.items():
+# #                     full_field_name = f"{parent_field}.{field}" if parent_field else field
+# #                     field_type = attributes.get('type', 'object')
+
+# #                     if field_type != 'object':
+# #                         known_fields.append(full_field_name)
+
+# #                     if field_type == 'object' and 'properties' in attributes:
+# #                         traverse_fields(attributes['properties'], full_field_name)
+
+# #             if properties:
+# #                 traverse_fields(properties)
+              
+# #                 if known_fields:
+# #                     return JsonResponse({'columns': known_fields})
+# #                     for field, field_type in known_fields:
+# #                         print(f"- {field}: {field_type}")
+# #                 else:
+# #                     print("No fields with known types found in the selected index.")
+# #             else:
+# #                 print("No fields found in the selected index.")
+# #         else:
+# #             print(f"Failed to retrieve mappings for index '{user_indices}'. HTTP Status Code: {response.status_code}")
+# #     except requests.exceptions.RequestException as e:
+# #         print(f"An error occurred while fetching the mappings: {e}")
+
+# # def input_filter_values(input_data, is_csv=True):
+# #     filters_map = {}
     
-# Step 5: Select fields 
-def select_fields(known_fields):
-    """
-    Choose from listed fields of selected index 
-
-    Parameter:
-    - known_fields: list of fields
-
-    Returns:
-    - selected_fields: select multiple fields.
-    
-    """
-    
-    selected_fields = []
-    while True:
-        for idx, field in enumerate(known_fields, start=1):
-            print(f"{idx}. {field}")
-        choices = input("Select fields by numbers (comma-separated, or 'done' to finish): ").strip()
+# #     if is_csv:
+# #         if input_data:
+# #             try:
+# #                 with open(input_data, newline='') as csvfile:
+# #                     reader = csv.reader(csvfile)
+# #                     headers = next(reader)  # Get the first row as headers
+# #                     for row in reader:
+# #                         if row:  # Check if the row is not empty
+# #                             for i, value in enumerate(row):
+# #                                 field = headers[i] if i < len(headers) else f"field_{i}"
+# #                                 if field in filters_map:
+# #                                     filters_map[field].append(value)
+# #                                 else:
+# #                                     filters_map[field] = [value]  # Create a new list for the field
+# #             except FileNotFoundError:
+# #                 print(f"Error: The file at {input_data} was not found.")
+# #                 return {}
+# #         else:
+# #             print("Error: No input data provided for CSV.")
+# #     else:
+# #         print("inputttttttttttttttt")
+# #         print(input_data)
+# #         for field_name, value in input_data:
+# #             value_list = [v.strip() for v in value.split(',')] 
+# #             if field_name in filters_map:
+# #                 filters_map[field_name].append(value_list)
+# #             else:
+# #                 filters_map[field_name] = value_list
         
-        if choices.lower() == '':
-            break
 
-        try:
-            indices = [int(choice) - 1 for choice in choices.split(',')]
-            for index in indices:
-                if 0 <= index < len(known_fields) and known_fields[index] not in selected_fields:
-                    selected_fields.append(known_fields[index])
-                else:
-                    print(f"Invalid choice: {index + 1}. Please select a valid field number.")
-        except ValueError:
-            print("Invalid input. Please enter numbers separated by commas.")
+# #     return filters_map
+# # supported_datebase = ['postgresql','mysql']   
 
-    return selected_fields
+# # def create_filter_body(filter_list, field):
+# #     """
+# #     Iterate over filter_list items, then Check if the filter_field is in field and Add terms filters.
 
+# #     Parameter: 
+# #     - filter_list: A dictionary mapping fields to their filter values.
+# #     - field: Selected fields.
+
+# #     Returns:
+# #     - filter_should: Create terms query with the matched field and values.
+
+# #     """
+# #     filter_should = []
     
+# #     for filter_field, values in filter_list.items():
+# #         # Check if the filter_field exists directly in the field list
+# #         if filter_field in field:
+# #             if values:
+# #                 for value in values:
+# #                     if value and value.strip():
+# #                         filter_should.append(
+# #                             {
+# #                                 "terms": {
+# #                                     filter_field: [value]
+# #                                 }
+# #                             }
+# #                         )
+# #             else:
+# #                 print(f"Skipping {filter_field} due to empty values.")
+# #         else:
+# #             # Check for nested fields (e.g., common.sample.field)
+# #             for existing_field in field:
+# #                 if filter_field in existing_field:
+# #                     if values:
+# #                         for value in values:
+# #                             if value and value.strip():
+# #                                 filter_should.append(
+# #                                     {
+# #                                         "terms": {
+# #                                             existing_field: [value]
+# #                                         }
+# #                                     }
+# #                                 )
+# #                     else:
+# #                         print(f"Skipping {existing_field} due to empty values.")
+# #                     break
+# #             else:
+# #                 print(f"{filter_field} does not exist in the provided field list or as a sub-field.")
 
-# Step 6: Input filter values
-def input_filter_values():
-    """
-    Prompt the user to input filter values either manually or through a CSV file.
-    
-    Returns:
-    - A dictionary mapping fields to their filter values.
-    """
-    input_choice = input("Do you want to manually input the filter list or use a CSV file? (Enter 'manual' or 'csv'): ").strip().lower()
-    
-    filters_map = {}
-
-    if input_choice == 'csv':
-        csv_file_path = input("Please enter the CSV file location: ")
+   
+# #     return filter_should          
         
-        try:
-            with open(csv_file_path, newline='') as csvfile:
-                reader = csv.reader(csvfile)
-                headers = next(reader)  # Get the first row as headers
-                for row in reader:
-                    if row:  # Check if the row is not empty
-                        for i, value in enumerate(row):
-                            field = headers[i] if i < len(headers) else f"field_{i}"
-                            if field in filters_map:
-                                filters_map[field].append(value)
-                            else:
-                                filters_map[field] = [value]  # Create a new list for the field
-        except FileNotFoundError:
-            print(f"Error: The file at {csv_file_path} was not found.")
-            return {}  # Return an empty dict if the file is not found
+# # def create_alias(selected_index,filter_body, workspace_name,request):
+# #     global alias_name
+# #     """
+# #     Create aliases on elastic search
+
+# #     Parameter: 
+# #     - selected_index: index name
+# #     - filter_body: Created terms query
+# #     - workspace_name: name of created work space
+# #     """
+# #     if filter_body:
+# #         current_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+# #         alias_name = f"{workspace_name}_{current_timestamp}"
+# #         print(alias_name)
+# #         body = {
+# #             "actions": [
+# #                 {
+# #                     "add": {
+# #                         "index": selected_index,
+# #                         "alias": alias_name,
+# #                         "filter": {
+# #                             "bool": {
+# #                                 "should": filter_body
+# #                             }
+# #                         }
+# #                     }
+# #                 }
+# #             ]
+# #         }
+
+# #         response = requests.post('http://192.168.6.175:9200/_aliases', json=body)
+# #         if response.status_code == 200:
+# #             print(f"Alias {alias_name} created successfully with filter list!")
+# #             request.session['alias_name'] = alias_name  # Store in session
+# #             time.sleep(1)
+# #         else:
+# #             print(f"Failed to create alias. HTTP Status Code: {response.status_code}")
+# #     else:
+# #         print("No filter values provided. Alias creation aborted.")
+# # filters = {}
+# # filter_body =[]
+# # result =[]
+# # def create_alices(request):
     
-    elif input_choice == 'manual':
-        print("Enter the filter values for manual input (press Enter without typing to finish):")
-        while True:
-            field = input("Enter field name: ")
-            if field == '':
-                break
-            value = input(f"Enter filter value for '{field}': ")
-            if field in filters_map:
-                filters_map[field].append(value)
-            else:
-                filters_map[field] = [value]  # Create a new list for the field
+# #     if request.method == 'POST':
+# #         # Convert items to a list
+# #         post_items = list(request.POST.items())
+
+# #         # Exclude the last element and get items after the 4th
+# #         filtered_items = post_items[4:-1]  # Start from the 5th item and exclude the last
+
+# #         # Create a list or dictionary with the results
+# #         result = [(field_name, value) for field_name, value in filtered_items]
+
     
-    else:
-        print("Invalid choice. Please enter 'manual' or 'csv'.")
-        exit() 
-    # print(filters_map)
-    return filters_map
+# #     workspace_name = request.POST.get('workspace_name')
+# #     columns = request.POST.getlist('columns[]')
+# #     # manual_fields = request.POST.getlist('manual_fields[]')  # Remove brackets
+# #     index_name = request.POST.get('database_type')
+
+# #     csv_file = request.FILES.get('csv_file') 
+    
+# #     if csv_file:
+# #         fs = FileSystemStorage()
+# #         filename = fs.save(csv_file.name, csv_file)
+# #         csv_file_path = os.path.join(settings.MEDIA_ROOT, filename)
+# #         filters =input_filter_values(csv_file_path, is_csv=True)
+# #         filter_body = create_filter_body(filters,columns)
+# #     else:
+       
+# #         filters = input_filter_values(result, is_csv=False)
+# #         filter_body = create_filter_body(filters,columns)
+   
+    
+# #     create_alias(index_name, filter_body, workspace_name,request) 
+# #     return redirect("data_view")
 
 
-# Step 7: terms query 
-def create_filter_body(filter_list, field):
-    """
-    Iterate over filter_list items, then Check if the filter_field is in field and Add terms filters.
+# # def get_date_fields_for_alias(request, specific_alias):
+# #     es_host = 'http://192.168.6.175:9200'
+# #     work_type = request.session.get('work_type', None)
+# #     es = Elasticsearch([es_host])
 
-    Parameter: 
-    - filter_list: A dictionary mapping fields to their filter values.
-    - field: Selected fields.
-
-    Returns:
-    - filter_should: Create terms query with the matched field and values.
-
-    """
-    filter_should =[]
-    common_str = "combined_docs.source."
-    for filter_field, values in filter_list.items():
-        if filter_field in field:
-            if values:
-                for value in values:
-                    if value and value.strip():
-                        filter_should.append(
-                            {
-                                "terms": {
-                                    filter_field: [value]
-                                }
-                            }
-                        )
-            else:
-                print(f"Skipping {filter_field} due to empty values.")
+# #     try:
+# #         response = es.indices.get_alias()
+# #         alias_found = False
+# #         date_fields = {}
         
-        else:
-            modified_filter_field = common_str + filter_field
-            if modified_filter_field in field:
-                if values:
-                    for value in values:
-                        if value and value.strip():
-                            filter_should.append(
-                                {
-                                    "terms": {
-                                        modified_filter_field: [value]
-                                    }
-                                }
-                            )
-                else:
-                    print(f"Skipping {modified_filter_field} due to empty values.")
-            else:
-                print(f"Neither {filter_field} nor {modified_filter_field} exist in provided field list.")
-    print("inside")
-    print(filter_should) 
-    return filter_should          
+# #         for index, data in response.items():
+# #             if specific_alias in data['aliases']:
+# #                 alias_found = True
+# #                 field_response = es.indices.get_mapping(index=index)
+# #                 fields = field_response[index]['mappings']['properties']
+                
+# #                 if work_type == 'datastream':
+# #                     ds_response = requests.get(f'http://192.168.6.175:9200/_data_stream/{index}', timeout=10)
+# #                     ds_response.raise_for_status()
+# #                     data_stream_info = ds_response.json()
+# #                     backing_indices = data_stream_info['data_streams'][0].get('indices', [])
+# #                     latest_index_name = backing_indices[-1]['index_name']
+# #                     fields = field_response[latest_index_name]['mappings']['properties']
+                
+# #                 date_fields = {field_name: field_info for field_name, field_info in fields.items() if field_info.get('type') == 'date'}
         
+# #         if alias_found:
+# #             return {specific_alias: list(date_fields.keys())}
+# #         else:
+# #             print(f"Alias '{specific_alias}' not found.")
+# #             return None
+# #     except (RequestException) as e:
+# #         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
+# #         return None
 
-# Step 8: Create alias
-def create_alias(selected_index,filter_body, workspace_name):
-    """
-    Create aliases on elastic search
-
-    Parameter: 
-    - selected_index: index name
-    - filter_body: Created terms query
-    - workspace_name: name of created work space
-    """
-    if filter_body:
-        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        alias_name = f"{workspace_name}_{current_timestamp}"
-        print(alias_name)
-        body = {
-            "actions": [
-                {
-                    "add": {
-                        "index": selected_index,
-                        "alias": alias_name,
-                        "filter": {
-                            "bool": {
-                                "should": filter_body
-                            }
-                        }
-                    }
-                }
-            ]
-        }
-
-        response = requests.post('http://192.168.5.175:9200/_aliases', json=body)
-        if response.status_code == 200:
-            print(f"Alias {alias_name} created successfully with filter list!")
-        else:
-            print(f"Failed to create alias. HTTP Status Code: {response.status_code}")
-    else:
-        print("No filter values provided. Alias creation aborted.")
-
-def main():
-    workspace_name = create_workspace()
-    user_indices = list_user_indices()
-    index_name = select_index(user_indices)
-
-    # After selecting index, list the fields and their types
-    if index_name:
-        known_fields = list_fields_and_types(index_name)
-
-        if known_fields:
             
-            field = select_fields(known_fields)
+# #     except Exception as e:
+# #         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
+# #         return None
+  
 
-            if field:
+# # es = Elasticsearch([{'host': '192.168.6.175', 'port': 9200, 'scheme': 'http'}])
+
+# # def fetch_from_elasticsearch(request):
+# #     alias_name = request.session.get('alias_name', None)
+# #     print(f"Fetching data from Elasticsearch for alias: {alias_name}")
+    
+# #     query = {
+# #         "_source": ["From", "location", "imsi", "To", "duration", "City_name"],
+# #         "query": {"match_all": {}},
+# #         "size": 10000
+# #     }
+# #     try:
+# #         response = es.search(index=alias_name, body=query)
+# #         result = [hit['_source'] for hit in response['hits']['hits']]
+# #         return JsonResponse(result, safe=False)
+# #     except ElasticsearchException as e:
+# #         error_message = {"error": str(e)}
+# #         return JsonResponse(error_message, status=500)
+
+
+
+# # def create_data_view_(data_view_index_pattern, time_field_name, data_view_name, auth=None, allow_no_index=False):
+# #     """
+# #     Create a new data view in Kibana.
+# #     """
+# #     data_view_payload = {
+# #         "data_view": {
+# #             'name': data_view_name,
+# #             "title": data_view_index_pattern,
+# #             "timeFieldName": time_field_name,
+# #             "allowNoIndex": allow_no_index,
+# #         }
+# #     }
+# #     endpoint = f"{kibana_host}/api/data_views/data_view"
+# #     try:
+# #         response = requests.post(endpoint, headers=headers, data=json.dumps(data_view_payload), auth=auth, timeout=10)
+# #         response.raise_for_status()
+# #         print("Data view created successfully.")
+# #         return response.json()
+# #     except RequestException as e:
+# #         print(f"Failed to create data view: {e}")
+# #         return None
+
+# # def get_data_views(auth=None):
+# #     """
+# #     Get all data views from Kibana.
+
+# #     :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+# #     :param auth: Optional tuple (username, password) for Basic Authentication.
+# #     :return: List of data views or None if the request fails.
+# #     """
+    
+# #     # Construct the API endpoint for getting data views
+# #     endpoint = f"{kibana_host}/api/data_views"
+
+# #     # Make the GET request to retrieve all data views
+# #     response = requests.get(endpoint, headers=headers)
+
+# #     if response.status_code == 200:
+# #         data_views = response.json().get('data_view', [])
+# #         data_views_info = []
+# #         for data_view in data_views:
+# #             # Extract the required fields: name, id, and indices
+# #             view_info = {
+# #                 'name': data_view.get('name'),
+# #                 'id': data_view.get('id'),
+# #                 'indices': data_view.get('title')  # Assuming title represents the index pattern
+# #             }
+# #             if not view_info['name'].startswith('.'):
+# #              data_views_info.append(view_info)
+
+# #         print("Retrieved data views info successfully.")
+# #         return data_views_info
+# #     else:
+# #         print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
+# #         return None
+# # import requests
+
+# # def get_data_view_id_by_name(data_view_name, auth=None):
+# #     """
+# #     Get the ID of a specific data view from Kibana by its name.
+
+# #     :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+# #     :param data_view_name: The name of the data view to look for.
+# #     :param auth: Optional tuple (username, password) for Basic Authentication.
+# #     :return: The ID of the data view or None if not found or request fails.
+# #     """
+    
+# #     # Construct the API endpoint for getting data views
+# #     endpoint = f"{kibana_host}/api/data_views"
+
+# #     # Set up headers, including authorization if provided
+# #     headers = {
+# #         "kbn-xsrf": "true",  # Kibana requires this header for all API requests
+# #     }
+    
+# #     if auth:
+# #         response = requests.get(endpoint, headers=headers, auth=auth)
+# #     else:
+# #         response = requests.get(endpoint, headers=headers)
+
+# #     if response.status_code == 200:
+# #         data_views = response.json().get('data_view', [])
+        
+# #         for data_view in data_views:
+# #             if data_view.get('name') == data_view_name:
+# #                 # Return the ID of the matched data view
+# #                 return data_view.get('id')
+        
+# #         print(f"Data view with name '{data_view_name}' not found.")
+# #         return None
+# #     else:
+# #         print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
+# #         return None
+
+# # def data_view(request):
+    
+# #     alias_name = request.session.get('alias_name', None)  # Retrieve from session
+# #     indexData = get_date_fields_for_alias(request,alias_name)
+# #     print(indexData)
+# #     fields_list = indexData.get(alias_name, [])
+# #     print(fields_list) # Assuming this function returns a list of aliases
+# #     context = {
+# #         'fields': fields_list # Add aliases to context
+# #     }
+# #     return render(request, 'data_view.html', context)
+
+
+# # def create_data_view(request):
+# #     alias_name = request.session.get('alias_name', None)  # Retrieve from session
+# #     workspace_name = request.session.get('workspace_name', None)  # Retrieve from session
+# #     request.session['data_view_name'] = workspace_name  # Store in session
+   
+# #     time_field_name = request.POST.get('time-field-name')
+# #     create_data_view_(data_view_index_pattern=alias_name,time_field_name=time_field_name,data_view_name=workspace_name)
+# #     return redirect("dashborad")
+# #     import requests
+# # from requests.exceptions import RequestException
+
+
+
+# # def get_all_dashboards():
+# #     endpoint = f"{kibana_host}/api/saved_objects/_find?type=dashboard"
+# #     try:
+# #         response = requests.get(endpoint, headers=headers, timeout=10)
+# #         response.raise_for_status()
+# #         dashboards = response.json().get('saved_objects', [])
+# #         dashboards_info = [
+# #             {'id': dashboard.get('id'), 'title': dashboard.get('attributes', {}).get('title')}
+# #             for dashboard in dashboards
+# #         ]
+# #         print("Retrieved dashboards successfully.")
+# #         return dashboards_info
+# #     except RequestException as e:
+# #         print(f"Failed to retrieve dashboards: {e}")
+# #         return None
+
+# # def get_data_view_id_by_name(data_view_name, auth=None):
+# #     endpoint = f"{kibana_host}/api/data_views"
+# #     headers = {"kbn-xsrf": "true"}
+
+# #     try:
+# #         response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
+# #         response.raise_for_status()
+# #         data_views = response.json().get('data_view', [])
+
+# #         for data_view in data_views:
+# #             if data_view.get('name') == data_view_name:
+# #                 return data_view.get('id')
+
+# #         print(f"Data view with name '{data_view_name}' not found.")
+# #         return None
+# #     except RequestException as e:
+# #         print(f"Failed to retrieve data views: {e}")
+# #         return None
+
+# # def get_dashboard_template_attributes(template_dashboard_id):
+# #     """
+# #     Get the attributes of a template dashboard from Kibana.
+
+# #     :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+# #     :param template_dashboard_id: The ID of the template dashboard to copy.
+# #     :param auth: Optional tuple (username, password) for Basic Authentication.
+# #     :return: Dashboard attributes or None if the request fails.
+# #     """
+# #     headers = {
+# #         'kbn-xsrf': 'true',
+# #         'Content-Type': 'application/json',
+# #         'Elastic-Api-Version': '2023-10-31'
+# #     }
+
+# #     # Construct the API endpoint for getting the template dashboard
+# #     endpoint = f"{kibana_host}/api/saved_objects/dashboard/{template_dashboard_id}"
+
+# #     # Make the GET request to retrieve the template dashboard
+# #     response = requests.get(endpoint, headers=headers, auth=auth)
+
+# #     if response.status_code == 200:
+# #         return response.json().get('attributes', {})
+# #     else:
+# #         print(f"Failed to retrieve template dashboard: {response.status_code} - {response.text}")
+# #         return None
+    
+# # def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id):
+# #     """_summary_  
+# #     # Function to copy an existing dashboard and assign a new data view
+
+
+# #     Args:
+# #         original_dashboard_id (_type_): _description_
+# #         new_title (_type_): _description_
+# #         new_data_view_id (_type_): _description_
+
+# #     Returns:
+# #         _type_: _description_
+# #     """
+# #     # Fetch the original dashboard
+# #     new_id = uuid.uuid4()
+
+# #     url = f"{kibana_host}/api/saved_objects/dashboard/{original_dashboard_id}"
+
+    
+# #     response = requests.get(url, headers=headers)
+# #     response.raise_for_status()
+# #     original_dashboard = response.json()
+
+# #     new_dashboard = copy.deepcopy(original_dashboard)
+    
+
+# #     new_dashboard['attributes']['title'] = new_title
+
+    
+    
+# #     id_value = next((ref['id'] for ref in new_dashboard['references'] if ref['type'] == 'index-pattern'), None)
+# #     for reference in new_dashboard.get("references", []):
+# #         if reference.get("id") == id_value:
+# #             reference["id"] = new_data_view_id
+    
+# #     # new_dashboard = json.loads(json.dumps(new_dashboard).replace(id_value,new_data_view_id))
+    
+# #     payload={"attributes": new_dashboard["attributes"],"references":new_dashboard["references"]}    
+# #     response = requests.post(f"{kibana_host}/api/saved_objects/dashboard/{new_id}", headers=headers,data=json.dumps(payload))
+
+    
+# #     # Check the result of the POST request
+# #     if response.status_code == 200:
+# #         # Parse the response to extract the new dashboard's ID
+# #         new_dashboard_id = response.json()['id']
+# #         print(f"New dashboard created successfully with ID: {new_dashboard_id}")
+# #     else:
+# #         print(f"Failed to create the new dashboard: {response.text}")
+# # def dashborad(request):
+# #     dashboards = get_all_dashboards()
+# #     print(dashboards)
+# #     tabss = [{"id": "tab1", "label": "Tab 1",}]
+# #     context = { 'tabs':  tabss,'dashboards' :dashboards}
+# #     return render(request,'new_dashboard.html',context)
+
+# # def create_dashborad(request):
+    
+# #     alias_names = request.session.get('data_view_name', None)
+# #     data_view_id = "e0825920-21c5-41ea-a451-e1521233f90f"
+# #     workspace_name = request.session.get('workspace_name', None)
+# #     if request.method == 'POST':
+# #         dashboard_id = "e0825920-21c5-41ea-a451-e1521233f90f"
+# #         request.session['dashboard_ids'] = dashboard_id
+# #         time.sleep(1)
+# #         create_new_dashboard(dashboard_id,workspace_name,data_view_id)
+# #     return redirect("generate_embed_link")
+# # def generate_embed_link(request):
+# #     fetch_from_elasticsearch(request)
+# #     workspace_name = request.session.get('workspace_name', None)
+# #     print(workspace_name)
+# #     dashboardId = "e0825920-21c5-41ea-a451-e1521233f90f"
+# #     print ("Generating embed link")
+    
+# #     """
+# #     Generate an HTML iframe embed link for a specified Kibana dashboard.
+
+# #     This function constructs a complete iframe element that embeds the
+# #     Kibana dashboard specified by the given dashboard ID. It renders
+# #     the iframe in a template with the specified base URL for the Kibana server.
+
+# #     Parameters:
+# #     ----------
+# #     request : HttpRequest
+# #         The HTTP request object used to render the template.
+    
+# #     dashboard_id : str
+# #         The unique identifier of the Kibana dashboard to embed.
+
+# #     base_url : str, optional
+# #         The base URL of the Kibana server. Defaults to the value of `kibana_host`.
+
+# #     Returns:
+# #     -------
+# #     HttpResponse
+# #         An HTTP response that renders the `embeded_dashboard.html` template 
+# #         with the generated iframe embed link as context.
+# #     """
+# #     embed_params = "?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3Anow-15m%2Cto%3Anow))&show-query-input=true&show-time-filter=true&hide-filter-bar=true"
+# #     embed_link = f"<iframe src='{kibana_host}/app/dashboards#/view/{dashboardId}{embed_params}' height='600' width='950'></iframe>"
+
+# #     return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.16.164:8000/manage/fetch_data/"})
+
+
+# #                                   #  DATA STREAM LIST OF FUNCTIONS
+
+
+
+# # # DATA STREAM LIST OF FUNCTION
+
+# # # <iframe src="http://192.168.6.175:5601/app/dashboards#/view/e0825920-21c5-41ea-a451-e1521233f90f?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3A'2023-01-14T04%3A40%3A59.269Z'%2Cto%3A'2023-01-14T04%3A41%3A21.251Z'))&show-query-input=true&show-time-filter=true" height="600" width="800"></iframe>
+
+
+   
+
+
+# # def display_data_stream_mapping(request,selectedDatabase):
+# #     print("display_data_stream_mapping")
+# #     """
+# #     Displays the entire mapping of the selected data stream's backing indices.
+
+# #     Parameters:
+# #     - data_stream_name: The name of the selected data stream.
+# #     """
+# #     response = requests.get(f'http://192.168.6.175:9200/_data_stream/{selectedDatabase}')
+# #     if response.status_code == 200:
+# #         data_stream_info = response.json()
+# #         backing_indices = data_stream_info['data_streams'][0].get('indices', [])
+        
+# #         if backing_indices:
+# #             # Get the latest (most recent) backing index
+# #             latest_index_name = backing_indices[-1]['index_name']
             
-                filter_list = input_filter_values()
-                filter_body = create_filter_body(filter_list, field)
+# #             # Retrieve and display the mapping for the latest backing index
+# #             mapping_response = requests.get(f'http://192.168.6.175:9200/{latest_index_name}/_mapping')
+            
+# #             if mapping_response.status_code == 200:
+# #                 mapping = mapping_response.json()
+# #                 properties = mapping[latest_index_name]['mappings']['properties']
+# #                 known_fields = []  
 
-                # Create the alias based on filter list
-                create_alias(index_name, filter_body, workspace_name)
+# #                 print(f"\nFields in the most recent backing index '{latest_index_name}':")
+                
+# #                 def list_fields(fields, parent=""):
+# #                     for field, attributes in fields.items():
+# #                         full_field_name = f"{parent}.{field}" if parent else field
+# #                         field_type = attributes.get('type', 'object')
+# #                         # print(f"{full_field_name} ({field_type})")
 
-# Run the main function
-if __name__ == "__main__":
-    main()
+# #                         if field_type != 'object':
+# #                             known_fields.append(full_field_name)
+                        
+# #                         # If the field is an object, list its nested fields
+# #                         if field_type == 'object' and 'properties' in attributes:
+# #                             list_fields(attributes['properties'], full_field_name)
+
+# #                 if properties:
+# #                     list_fields(properties)
+
+# #                     if known_fields:
+# #                         return JsonResponse({'columns': known_fields})
+# #                         for field, field_type in known_fields:
+# #                             print(f"- {field}: {field_type}")
+# #                     else:
+# #                         print("No fields with known types found in the selected index.")
+# #                         return []
+                
+# #             else:
+# #                 print(f"Failed to retrieve mapping for index '{latest_index_name}'. HTTP Status Code: {mapping_response.status_code}")
+# #         else:
+# #             print("No backing indices found for the selected data stream.")
+# #     else:
+# #         print(f"Failed to retrieve data stream details for '{selectedDatabase}'. HTTP Status Code: {response.status_code}")
+
+
+
+
+
+# # user modelsfrom django.contrib.auth.models import (
+# #     AbstractBaseUser,
+# #     BaseUserManager,
+# #     PermissionsMixin,
+# # )
+
+# # # Create your models here.
+
+# # class SystemUserManager(BaseUserManager):
+# #     def create_user(self, email, username, password=None, **extra_fields):
+# #         if not email:
+# #             raise ValueError("The Email field must be set")
+# #         email = self.normalize_email(email)
+# #         user = self.model(email=email, username=username, **extra_fields)
+# #         user.set_password(password)
+# #         user.save(using=self._db)
+# #         return user
+
+# #     def create_superuser(self, email, username, password=None, **extra_fields):
+# #         extra_fields.setdefault("is_staff", True)
+# #         extra_fields.setdefault("is_superuser", False)
+
+# #         return self.create_user(email, username, password, **extra_fields)
+
+# # class UserRoles(models.Model):
+# #     role_name = models.CharField(max_length=200)
+
+# # class SystemUser(AbstractBaseUser, PermissionsMixin):
+# #     ROLE_CHOICES = (
+# #         ("Director", "Director"),
+# #         ("Department", "Department"),
+# #         ("Officer", "Officer"),
+# #     )
+   
+# #     email = models.EmailField(unique=True)
+# #     username = models.CharField(max_length=30, unique=True)
+# #     first_name = models.CharField(max_length=30, default="")
+# #     last_name = models.CharField(max_length=30, default="")
+# #     is_active = models.BooleanField(default=True)
+# #     is_staff = models.BooleanField(default=True)
+# #     # Add your custom fields here
+# #     user_role = models.CharField(UserRoles, choices=ROLE_CHOICES,max_length=15)
+    
+# #     profile_picture = models.ImageField(
+# #         upload_to="profile_pictures/", null=True, blank=True
+# #     )
+# #     age = models.IntegerField(default=0)
+# #     gender = models.CharField(max_length=7)
+# #     address = models.CharField(max_length=7)
+# #     objects = SystemUserManager()
+
+# #     USERNAME_FIELD = "email"
+# #     REQUIRED_FIELDS = ["username"]
+
+# #     def __str__(self):
+# #         return self.email
+
+# # class Target(models.Model):
+# #     photo = models.ImageField(
+# #         upload_to="profile_pictures/", null=True, blank=True
+# #     )
+# #     name = models.JSONField(blank = True)
+# #     target_location = models.JSONField()
+# #     phone = models.JSONField()
+# #     imei = models.JSONField()
+# #     def __str__(self):
+# #         return self.status
+    
+# # class Case(models.Model):
+# #     case_name = models.CharField(max_length=100,unique=True,name="የስጋት አይነት")
+
+# # class subCase(models.Model):
+# #     case_name = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="Case_Type")
+# #     sub_case = models.CharField(max_length=100,name="Case")
+   
+# # class First_request(models.Model):
+# #     target_code = models.ForeignKey(Target, related_name="Operation_Reqiest", on_delete=models.CASCADE, blank=True,null=True)
+# #     name = models.JSONField()
+# #     phone_number = models.JSONField()
+# #     case = models.ForeignKey(to=Case, on_delete=models.CASCADE, blank=True, null=True)
+# #     subcase = models.ForeignKey(to=subCase, on_delete=models.CASCADE, blank=True, null=True)
+# #     photo = models.ImageField(
+# #         upload_to="file_pictures/", null=True, blank=True
+# #     )    
+# #     target_location = models.CharField(max_length=200, blank = True)
+# #     status = models.CharField(max_length=10, default='pending')
+# #     description = models.CharField(max_length=200, blank = True)
+# #     request_submited_date = models.DateTimeField(auto_now=True, auto_now_add=False)
+# #     request_submited_entity = models.CharField(max_length=50,help_text="የኦፕሬሽን ጥያቄ ያቀረበው ተቋም")
+# #     request_subited_person = models.ForeignKey(SystemUser, related_name="A_person_Who_request_operation_to_be_condacted", on_delete=models.CASCADE)
+    
+# #     def __str__(self):
+# #         return self.status
+
+# # class OperationResult(models.Model):
+# #     Request_code = models.ForeignKey(First_request, related_name="Report_for_Request_Submited",on_delete=models.CASCADE)
+    
+# #     result_list = models.JSONField(default=list)
+# #     end_date = models.DateTimeField()
+# #     house_number = models.IntegerField(null=True, blank=True)
+
+# #     name = models.CharField(max_length=400,null=True, blank=True)
+# #     target_location = models.CharField(max_length=400,null=True, blank=True)
+# #     phone_number =  models.JSONField(default=list)
+    
+# #     car_info = models.JSONField(default=list)
+# #     description = models.CharField(max_length=400)
+# #     profile_picture = models.ImageField(
+# #         upload_to="target_profile/"
+# #     )
+# #     target_provider_person = models.CharField(max_length=100)
+# #     target_accepter_company = models.CharField(max_length=100)
+# #     target_provider_company = models.CharField(max_length=100)
+# #     target_accepter_person = models.CharField(max_length=100)
+
+# # class Unit(models.Model):
+# #     unit_name = models.CharField(max_length=50,unique=True)
+
+# # class Assign(models.Model):
+# #     allower = models.ForeignKey(SystemUser, related_name="A_person_who_allow_the_operation" , on_delete=models.CASCADE)
+# #     assigned_Operator = models.ForeignKey(SystemUser, related_name="A_person_who_assing_to_work_on_the_operation", on_delete=models.CASCADE)
+# #     request_code = models.ForeignKey(First_request, related_name="Request_operation", on_delete=models.CASCADE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# from django.db import models
+# from django.contrib.auth.models import AbstractUser
+# from django.utils import timezone
+# from datetime import datetime
+# from django.db.models import Q,JSONField
+# from django.core.exceptions import ValidationError
+# from django.core.validators import MinLengthValidator
+
+
+# class Role(models.Model):
+#     name = models.CharField(max_length=50, unique=True) 
+
+# class Resource(models.Model):
+#     RESOURCE_TYPES = [
+#         ('index', 'Index'),
+#         ('dashboard', 'Dashboard'),
+#     ]
+#     name = models.CharField(max_length=100, unique=True) 
+#     resource_type = models.CharField(max_length=10, choices=RESOURCE_TYPES)
+
+# class Permission(models.Model):
+#     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="permissions")
+#     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name="permissions")
+#     privilege = models.CharField(max_length=50)  
+
+# class CustomUser(AbstractUser):
+#     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # # in view function
+
+
+# # from myapp.models import Role, Resource, Permission
+
+# # Create a role
+# sales_role = Role.objects.create(name="sales_role")
+
+# # Define resources
+# index_resource = Resource.objects.create(name="sales_data_*", resource_type="index")
+# dashboard_resource = Resource.objects.create(name="dashboard/sales_*", resource_type="dashboard")
+
+# # Assign permissions to the role
+# Permission.objects.create(role=sales_role, resource=index_resource, privilege="read")
+# Permission.objects.create(role=sales_role, resource=dashboard_resource, privilege="read")
+
+
+
+# # # Decorater to check permission
+
+# # from django.core.exceptions import PermissionDenied
+
+# # def has_permission(resource_name, privilege):
+# #     def decorator(view_func):
+# #         def _wrapped_view(request, *args, **kwargs):
+# #             user_role = request.user.role
+# #             if not user_role:
+# #                 raise PermissionDenied("No role assigned to the user.")
+            
+# #             # Check if the role has the required permission
+# #             permissions = user_role.permissions.filter(
+# #                 resource__name=resource_name, privilege=privilege
+# #             )
+# #             if permissions.exists():
+# #                 return view_func(request, *args, **kwargs)
+# #             raise PermissionDenied("You do not have the required permissions.")
+# #         return _wrapped_view
+# #     return decorator
+
+# # # Permissions in Views
+ 
+# # from django.shortcuts import render
+# # from .decorators import has_permission
+
+# # @has_permission("sales_data_*", "read")
+# # def view_sales_data(request):
+# #     # Logic to display sales data
+# #     return render(request, "sales_data.html")
+
+# # @has_permission("dashboard/sales_*", "read")
+# # def view_sales_dashboard(request):
+# #     # Logic to display sales dashboard
+# #     return render(request, "sales_dashboard.html")
+
+# # # Assign Roles to Users
+# # from myapp.models import CustomUser, Role
+
+# # # Assign role to a user
+# # user = CustomUser.objects.get(username="john")
+# # sales_role = Role.objects.get(name="sales_role")
+# # user.role = sales_role
+# # user.save()
+

@@ -1,18 +1,19 @@
-{% extends 'base.html'%} 
+{% extends 'base.html' %}
 {% load static %} 
 {% block content %}
 <style>
     body {
         background-image: url("{% static 'images/icon.jpg' %}");
-        background-size: cover; /* Ensures the image covers the entire background */
-        background-position: center center; /* Centers the image */
-        background-attachment: fixed; /* Keeps the background fixed when scrolling */
-        height: 100vh; /* Ensures the body takes the full viewport height */
+        background-size: cover;
+        background-position: center center;
+        background-attachment: fixed;
+        height: 100vh;
     }
     .card {
-        background-color: rgba(255, 255, 255, 0.9); /* Optional: makes the card slightly transparent to show the background image */
+        background-color: rgba(255, 255, 255, 0.9);
     }
 </style>
+
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6 col-xl-5">
         <div class="card overflow-hidden">
@@ -20,11 +21,9 @@
                 <div class="row">
                     <div class="col-7">
                         <div class="text-primary p-4">
-                           
                             <p>Create workspace.</p>
                         </div>
                     </div>
-                    
                     <div class="col-5 align-self-end">
                         <img src="assets/images/profile-img.png" alt="" class="img-fluid">
                     </div>
@@ -39,39 +38,65 @@
                             </span>
                         </div>
                     </a>
-
-                    <a href="index.html" class="auth-logo-dark">
-                        <div class="avatar-md profile-user-wid mb-4">
-                            <span class="avatar-title rounded-circle bg-light">
-                                <img src="assets/images/logo.svg" alt="" class="rounded-circle" height="34">
-                            </span>
-                        </div>
-                    </a>
                 </div>
+
                 <div class="p-2">
-                    <form class="form-horizontal" id="requesterForm" action="{% url 'create_workspace' %}" method="post"  enctype="multipart/form-data">
+                    <form class="form-horizontal" id="requesterForm" action="{% url 'create_workspace' %}" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="username" class="form-label">Workspace name</label>
+                            <label for="workspace_name" class="form-label">Workspace name</label>
                             <input type="text" class="form-control" id="workspace_name" name="workspace_name" placeholder="Enter Workspace name">
+                            <div id="workspace_name_error" class="text-danger" style="display: none;">Please enter a valid workspace name (letters only).</div>
                         </div>
                         <div class="mb-3">
                             <label for="work_type" class="form-label">Select the data source</label>
                             <select class="form-control" id="work_type" name="work_type">
+                                <option value="">Select a data source</option>
                                 <option value="index">Index</option>
                                 <option value="datastream">Datastream</option>
                             </select>
+                            <div id="work_type_error" class="text-danger" style="display: none;">Please select a data source.</div>
                         </div>
                         <div class="mt-3 d-grid">
                             <button class="btn btn-primary waves-effect waves-light" type="submit">Create</button>
                         </div>
                     </form>
                 </div>
-
             </div>
         </div>
-       
-
     </div>
 </div>
+
+<script>
+function validateForm() {
+    var workspaceName = document.getElementById("workspace_name").value.trim();
+    var workType = document.getElementById("work_type").value;
+
+    var isValid = true;
+
+    // Clear previous error messages
+    document.getElementById("workspace_name_error").style.display = "none";
+    document.getElementById("work_type_error").style.display = "none";
+
+    // Validate workspace name - Only alphabetic characters
+    if (workspaceName === "") {
+        document.getElementById("workspace_name_error").innerText = "Workspace name cannot be empty.";
+        document.getElementById("workspace_name_error").style.display = "block";
+        isValid = false;
+    } else if (!/^[a-zA-Z]+$/.test(workspaceName)) {
+        document.getElementById("workspace_name_error").innerText = "Workspace name must only contain letters (A-Z, a-z).";
+        document.getElementById("workspace_name_error").style.display = "block";
+        isValid = false;
+    }
+
+    // Validate data source selection
+    if (workType === "") {
+        document.getElementById("work_type_error").style.display = "block";
+        isValid = false;
+    }
+
+    return isValid;
+}
+</script>
+
 {% endblock %}

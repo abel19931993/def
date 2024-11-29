@@ -5,30 +5,32 @@
     <div class="col-xl-12">
         <div class="card">
             <div class="card-body">
-                <form action="{% url 'create_data_view' %}" method="post" enctype="multipart/form-data">
+                <form action="{% url 'create_data_view' %}" method="post" enctype="multipart/form-data" id="timestampForm">
                     {% csrf_token %}
+
+                    <!-- Add alert container for validation messages -->
+                    <div id="alert-container"></div>
+
                     <div class="row mb-4">
-                        <label for="workspace_name" class="col-sm-6 col-form-label"><h3>Select timestamp filed</h3></label>
+                        <label for="workspace_name" class="col-sm-6 col-form-label"><h3>Select timestamp field</h3></label>
                     </div> 
+
                     <div class="row">
                         <div class="col-sm-6">
-                           
-
                             <div class="row mb-4">
                                 <label for="formFile" class="col-sm-3 col-form-label">Timestamp field</label>
                                 <div class="col-sm-9">
-                                    <select id="columnSelect" name="time-field-name" class="form-control mt-2 ">
-                                    {% for field in fields %}
-                                        <option value="{{ field }}">{{ field }}</option>
-                                    {% endfor %}
+                                    <select id="columnSelect" name="time-field-name" class="form-control mt-2">
+                                        <option value="">--Select a Timestamp Field--</option>
+                                        {% for field in fields %}
+                                            <option value="{{ field }}">{{ field }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>
-
-                        
                         </div>
-                       
                     </div>    
+
                     <div class="row mb-4">
                         <div class="col-sm-9 offset-sm-3">
                             <button type="submit" class="btn btn-primary">Submit</button>
@@ -39,5 +41,41 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Form validation logic
+    document.getElementById('timestampForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent form from submitting immediately
+
+        const columnSelect = document.getElementById('columnSelect');
+        const alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = ''; // Clear any previous alerts
+
+        let formValid = true;
+        let alertMessage = '';
+        let alertType = 'danger'; // Default to error type
+
+        // Validate if a timestamp field is selected
+        if (!columnSelect.value) {
+            alertMessage = 'Please select a timestamp field.';
+            formValid = false;
+        }
+
+        // If form is not valid, show alert message
+        if (!formValid) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alertType} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <strong>Error!</strong> ${alertMessage}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+        } else {
+            // If form is valid, submit it
+            this.submit();
+        }
+    });
+</script>
 
 {% endblock %}

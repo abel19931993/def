@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %} 
+{% block content %}
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card">
+                <div class="card-body">
+                    <form action="{% url 'create_police' %}" method="post" enctype="multipart/form-data" id="workspaceForm">
+                        {% csrf_token %}
+                        
+                        <!-- Add alert container -->
+                        <div id="alert-container"></div>
+
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="row mb-4">
+                                    <label for="police_name" class="col-sm-3 col-form-label">Police Name:</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" name="police_name" id="police_name"  class="form-control"  >  
+                                    </div>
+                                </div>
+                               
+                                <div class="row mb-4">
+                                    <label for="database_type" class="col-sm-3 col-form-label">Select Index:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select" name="database_type" id="database_type" required>
+                                            {% for db in list_indices %}
+                                                <option value="{{ db }}">{{ db }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mb-4">
+                                    <label for="police_name" class="col-sm-3 col-form-label">Select Match_field:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select" name="match_field" id="match_field" required>
+                                            
+                                        </select> 
+                                    </div>
+                                </div>
+    
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label for="columns-select" class="col-sm-6 col-form-label offset-sm-3"><h4>Select Enrich_fields</h4></label>
+                                <div id="columnsContainer" class="col-sm-9 offset-sm-3">
+                                    <!-- Column selection elements will be dynamically added here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-sm-9 offset-sm-3">
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </div>
+                        </div> 
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script> 
+       document.getElementById('database_type').addEventListener('change', function() {
+    const selectedDatabase = this.value;
+    const columnsContainer = document.getElementById('columnsContainer');
+    const matchFieldSelect = document.getElementById('match_field');
+    
+    columnsContainer.innerHTML = ''; // Clear previous options
+    matchFieldSelect.innerHTML = ''; // Clear previous options
+
+    fetch(`select_index/${selectedDatabase}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.columns && data.columns.length > 0) {
+                data.columns.forEach(column => {
+                    // Create checkbox elements for columnsContainer
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-3';
+
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = column;
+                    checkbox.name = 'columns[]';
+                    checkbox.className = 'form-check-input';
+
+                    label.textContent = column;
+                    label.className = 'form-check-label';
+
+                    label.prepend(checkbox);
+                    div.appendChild(label);
+                    columnsContainer.appendChild(div);
+
+                    // Create option elements for matchFieldSelect
+                    const option = document.createElement('option');
+                    option.value = column;
+                    option.textContent = column;
+                    matchFieldSelect.appendChild(option);
+                });
+            } else {
+                console.error('No columns found in the response.');
+            }
+        })
+        .catch(error => console.error('Error fetching columns:', error));
+});
+
+
+    </script>
+{% endblock %}

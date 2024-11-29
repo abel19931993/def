@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<style>
+    * {
+      border: 0;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --blue-black: rgb(14, 25, 44);
+      --gold: rgb(177, 145, 99);
+      --white: #ffffff;
+      --gray: rgb(200, 200, 200);
+      --bg: #e3e4e8;
+      --fg: #17181c;
+      --dur: 8s;
+      --serachicon: <i class="fa-regular fa-magnifying-glass"></i>
+      font-size: calc(20px + (30 - 20) * (100vw - 320px) / (1280 - 320px));
+    }
+    
+    body {
+      background: var(--blue-black);
+      color: var(--fg);
+      font: bold 1em/1.5 "Comfortaa", sans-serif;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      height: 100vh;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    p {
+      color: var(--gold);
+    }
+
+    /* Hexagonal Ripple Animation Styles */
+    .hexagon {
+      margin-bottom: 20em;
+      overflow: hidden;
+      position: absolute;
+      width: 100%; /* Increased size */
+      height: 100%; /* Increased size */
+    }
+
+    .hexagon__group, .hexagon__sector, .hexagon__sector:before, .hexagon__sector:after {
+      position: absolute;
+    }
+
+    .hexagon__group {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Animations delays for staggered effect */
+    .hexagon__group:nth-child(2) .hexagon__sector,
+    .hexagon__group:nth-child(2) .hexagon__sector:before,
+    .hexagon__group:nth-child(2) .hexagon__sector:after {
+      animation-delay: calc(var(--dur) * -1/6);
+    }
+    .hexagon__group:nth-child(3) .hexagon__sector,
+    .hexagon__group:nth-child(3) .hexagon__sector:before,
+    .hexagon__group:nth-child(3) .hexagon__sector:after {
+      animation-delay: calc(var(--dur) * -2/6);
+    }
+    .hexagon__group:nth-child(4) .hexagon__sector,
+    .hexagon__group:nth-child(4) .hexagon__sector:before,
+    .hexagon__group:nth-child(4) .hexagon__sector:after {
+      animation-delay: calc(var(--dur) * -3/6);
+    }
+    .hexagon__group:nth-child(5) .hexagon__sector,
+    .hexagon__group:nth-child(5) .hexagon__sector:before,
+    .hexagon__group:nth-child(5) .hexagon__sector:after {
+      animation-delay: calc(var(--dur) * -4/6);
+    }
+    .hexagon__group:nth-child(6) .hexagon__sector,
+    .hexagon__group:nth-child(6) .hexagon__sector:before,
+    .hexagon__group:nth-child(6) .hexagon__sector:after {
+      animation-delay: calc(var(--dur) * -5/6);
+    }
+
+    /* Rotating hexagon sectors */
+    .hexagon__group:nth-child(odd) {
+      transform: rotate(30deg);
+    }
+
+    .hexagon__sector, .hexagon__sector:before, .hexagon__sector:after {
+      animation-duration: var(--dur);
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+      width: 0.2em;
+      height: 0.2em;
+    }
+
+    .hexagon__sector {
+      animation-name: moveOut1;
+      top: calc(50% - 0.1em);
+      left: calc(50% - 0.1em);
+    }
+    .hexagon__sector:nth-child(2) {
+      animation-name: moveOut2;
+    }
+    .hexagon__sector:nth-child(3) {
+      animation-name: moveOut3;
+    }
+    .hexagon__sector:nth-child(4) {
+      animation-name: moveOut4;
+    }
+    .hexagon__sector:nth-child(5) {
+      animation-name: moveOut5;
+    }
+    .hexagon__sector:nth-child(6) {
+      animation-name: moveOut6;
+    }
+
+    .hexagon__sector:before, .hexagon__sector:after {
+      animation-name: ripple;
+      background-color: var(--white);
+      border-radius: 0.1em;
+      content: "";
+      display: block;
+      top: 0;
+      left: 0;
+      transform-origin: 0.1em 0.1em;
+    }
+
+    .hexagon__sector:before {
+      transform: rotate(-30deg)
+    }
+
+    .hexagon__sector:after {
+      transform: rotate(-150deg)
+    }
+
+    /* Animations for movement and ripple effect */
+    @keyframes moveOut1 {
+      from { transform: translateY(0) scale(0); }
+      3% { transform: translateY(0.2em) scale(1); }
+      97% { transform: translateY(7.3em) scale(1); }
+      to { transform: translateY(7.5em) scale(0); }
+    }
+
+    @keyframes moveOut2 {
+      from { transform: rotate(60deg) translateY(0) scale(0); }
+      3% { transform: rotate(60deg) translateY(0.2em) scale(1); }
+      97% { transform: rotate(60deg) translateY(7.3em) scale(1); }
+      to { transform: rotate(60deg) translateY(7.5em) scale(0); }
+    }
+
+    @keyframes moveOut3 {
+      from { transform: rotate(120deg) translateY(0) scale(0); }
+      3% { transform: rotate(120deg) translateY(0.2em) scale(1); }
+      97% { transform: rotate(120deg) translateY(7.3em) scale(1); }
+      to { transform: rotate(120deg) translateY(7.5em) scale(0); }
+    }
+
+    @keyframes moveOut4 {
+      from { transform: rotate(180deg) translateY(0) scale(0); }
+      3% { transform: rotate(180deg) translateY(0.2em) scale(1); }
+      97% { transform: rotate(180deg) translateY(7.3em) scale(1); }
+      to { transform: rotate(180deg) translateY(7.5em) scale(0); }
+    }
+
+    @keyframes moveOut5 {
+      from { transform: rotate(240deg) translateY(0) scale(0); }
+      3% { transform: rotate(240deg) translateY(0.2em) scale(1); }
+      97% { transform: rotate(240deg) translateY(7.3em) scale(1); }
+      to { transform: rotate(240deg) translateY(7.5em) scale(0); }
+    }
+
+    @keyframes moveOut6 {
+      from { transform: rotate(300deg) translateY(0) scale(0); }
+      3% { transform: rotate(300deg) translateY(0.2em) scale(1); }
+      97% { transform: rotate(300deg) translateY(7.3em) scale(1); }
+      to { transform: rotate(300deg) translateY(7.5em) scale(0); }
+    }
+
+    @keyframes ripple {
+      from, to { width: 0.2em; }
+      33% { width: 2.4em; }
+    }
+
+    /* Search field and positioning */
+    #s {
+      background: var(--white);
+      text-indent: 1em;
+      display: inline-block;
+      border: 2px solid var(--blue-black);
+      width: 0;
+      height: 3em;
+      border-radius: 3em;
+      transition: all 0.3s ease;
+      outline: none;
+      padding: 1em 1.5em;
+      cursor: pointer;
+      color: var(--gold);
+      font-size: inherit;
+      font-family: inherit;
+      position: absolute;
+      text-align: center;
+      z-index: 2;
+    }
+
+    #s:focus, #s:hover {
+      background: var(--white);
+      color: var(--blue-black);
+      width: 60%;
+      cursor: text;
+      transform: scale(1.05);
+    }
+
+    #s::before {
+      content: var(--serachicon); 
+      font-size: 1.5em;
+      color: var(--fg);
+      position: absolute;
+      left: 0.5em;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    #s:focus::before {
+      color: var(--fg);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #17181c;
+        --fg: #e3e4e8;
+      }
+    }
+  </style>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="hexagon" aria-label="Animated hexagonal ripples">
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                    <div class="hexagon__group">
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                      <div class="hexagon__sector"></div>
+                    </div>
+                  </div>
+                  {{ page_obj }}
+                  <form id="searchform" method="post" enctype="multipart/form-data" action="/manage/search">
+                    {% csrf_token %}
+                    <input id="s" type="search" name="s" placeholder="Search..." autocomplete="off">
+                    <p><br><br><br><br><br>Sailing confidently through the boundless ocean of data</p>
+                  </form>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add event listener for the Enter key to submit the form
+    document.getElementById('s').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent the default behavior (form submission on Enter)
+        document.getElementById('searchform').submit(); // Manually submit the form
+      }
+    });
+  </script>
+
+{% endblock %}

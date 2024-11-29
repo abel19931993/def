@@ -22,7 +22,9 @@ from rest_framework.views import APIView
 from django.shortcuts import render,redirect
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
-
+import uuid
+# from elasticsearch.exceptions import ElasticsearchException
+from requests.exceptions import RequestException
 # Kibana server details
 kibana_host = "http://192.168.6.175:5601" 
 es_host = "http://192.168.6.175:9200"
@@ -31,67 +33,71 @@ headers = {
     'kbn-xsrf': 'true'  # Required header for Kibana API requests
 }
 
+
+    # Return the result as JSON response
+#     return JsonResponse(result, safe=False, json_dumps_params={'indent': 4})
 class SystemUserStaffPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         # Check if any of the required permissions are met
         return request.user.is_authenticated and (
            IsAdmin().has_permission(request, view)
         )
-workspace_name = None  
+workspace_name = None 
+police_name = None 
 alias_name = None
 data_view_name = None
 dashboard_ids = None
 work_type = None
 def list_user_indices():
-    response = requests.get('http://192.168.6.175:9200/_cat/indices?v&h=index&format=json')
-    all_indices = response.json()
-    user_indices = [index['index'] for index in all_indices if not index['index'].startswith('.')]
-    return user_indices
-def get_data_views():
+    try:
+        response = requests.get('http://192.168.6.175:9200/_cat/indices?v&h=index&format=json', timeout=10)
+        response.raise_for_status()
+        all_indices = response.json()
+        user_indices = [index['index'] for index in all_indices if not index['index'].startswith('.')]
+        return user_indices
+    except RequestException as e:
+        print(f"Error fetching user indices: {e}")
+        return []
+def get_data_views(auth=None):
     """
     Get all data views from Kibana.
-
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
-    :param auth: Optional tuple (username, password) for Basic Authentication.
-    :return: List of data views or None if the request fails.
     """
-    
-    # Construct the API endpoint for getting data views
     endpoint = f"{kibana_host}/api/data_views"
-
-    # Make the GET request to retrieve all data views
-    response = requests.get(endpoint, headers=headers)
-
-    if response.status_code == 200:
+    try:
+        response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
+        response.raise_for_status()
         data_views = response.json().get('data_view', [])
         data_views_info = []
         for data_view in data_views:
-            # Extract the required fields: name, id, and indices
             view_info = {
                 'name': data_view.get('name'),
                 'id': data_view.get('id'),
-                'indices': data_view.get('title')  # Assuming title represents the index pattern
+                'indices': data_view.get('title')
             }
-            data_views_info.append(view_info)
-
+            if not view_info['name'].startswith('.'):
+                data_views_info.append(view_info)
         print("Retrieved data views info successfully.")
         return data_views_info
-    else:
-        print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
+    except RequestException as e:
+        print(f"Failed to retrieve data views: {e}")
         return None
+
     
 def get_data_stream_names():
-    response = requests.get('http://192.168.6.175:9200/_data_stream')
-    all_data_streams = response.json()
-    
-    # Extract names of data streams, excluding system data streams
-    data_stream_names = [
-        ds['name'] for ds in all_data_streams['data_streams'] 
-        if not ds.get('system', False)  # Exclude if 'system' is True
-    ]
-    
-    print(data_stream_names)
-    return data_stream_names
+    try:
+        response = requests.get('http://192.168.6.12:9200/_data_stream', timeout=10)
+        response.raise_for_status()
+        all_data_streams = response.json()
+        data_stream_names = [
+            ds['name'] for ds in all_data_streams['data_streams'] 
+            if not ds.get('system', False)
+        ]
+        print(data_stream_names)
+        return data_stream_names
+    except RequestException as e:
+        print(f"Error fetching data stream names: {e}")
+        return []
+
 
 # Example usage
 kibana_host = "http://192.168.6.175:5601"
@@ -152,9 +158,10 @@ def index_view(request):
 
 # Step 3: Select index
 def select_index(request, user_indices):
+    print("hiiiiiiiiii")
     print(user_indices)
     try:
-        response = requests.get(f'http://192.168.6.175:9200/{user_indices}/_mapping')
+        response = requests.get(f'http://192.168.6.12:9200/{user_indices}/_mapping')
         print(response)
         if response.status_code == 200:
             mapping = response.json()
@@ -239,9 +246,10 @@ def create_filter_body(filter_list, field):
     - filter_should: Create terms query with the matched field and values.
 
     """
-    filter_should =[]
-    common_str = "combined_docs.source."
+    filter_should = []
+    
     for filter_field, values in filter_list.items():
+        # Check if the filter_field exists directly in the field list
         if filter_field in field:
             if values:
                 for value in values:
@@ -255,24 +263,26 @@ def create_filter_body(filter_list, field):
                         )
             else:
                 print(f"Skipping {filter_field} due to empty values.")
-        
         else:
-            modified_filter_field = common_str + filter_field
-            if modified_filter_field in field:
-                if values:
-                    for value in values:
-                        if value and value.strip():
-                            filter_should.append(
-                                {
-                                    "terms": {
-                                        modified_filter_field: [value]
+            # Check for nested fields (e.g., common.sample.field)
+            for existing_field in field:
+                if filter_field in existing_field:
+                    if values:
+                        for value in values:
+                            if value and value.strip():
+                                filter_should.append(
+                                    {
+                                        "terms": {
+                                            existing_field: [value]
+                                        }
                                     }
-                                }
-                            )
-                else:
-                    print(f"Skipping {modified_filter_field} due to empty values.")
+                                )
+                    else:
+                        print(f"Skipping {existing_field} due to empty values.")
+                    break
             else:
-                print(f"Neither {filter_field} nor {modified_filter_field} exist in provided field list.")
+                print(f"{filter_field} does not exist in the provided field list or as a sub-field.")
+
    
     return filter_should          
         
@@ -353,105 +363,91 @@ def create_alices(request):
     create_alias(index_name, filter_body, workspace_name,request) 
     return redirect("data_view")
 
-def get_date_fields_for_alias(request,specific_alias):
-    print("kkkkkkkkkkkkkkkkkk")
-    work_type = request.session.get('work_type', None) 
-    print(work_type)
-    """
-    Get all date fields for a specific user-defined alias in Elasticsearch.
 
-    :param es_host: The Elasticsearch host (e.g., "http://localhost:9200").
-    :param specific_alias: The user-defined alias to retrieve date fields for.
-    :return: A dictionary containing the alias and its date fields.
-    """
-    # Create an Elasticsearch client
+def get_date_fields_for_alias(request, specific_alias):
+    es_host = 'http://192.168.6.175:9200'
+    work_type = request.session.get('work_type', None)
     es = Elasticsearch([es_host])
 
-    date_fields = {}
-
     try:
-        # Retrieve all aliases
         response = es.indices.get_alias()
-       
-        # Check if the specific alias exists
         alias_found = False
+        date_fields = {}
+        
         for index, data in response.items():
-            for alias in data['aliases']:
-                if alias == specific_alias:
-                   
-                    alias_found = True
-                    # Include all fields associated with the index of the alias
-                    field_response = es.indices.get_mapping(index=index)
-                    print(field_response)
-                    if work_type == 'datastream':
-                        response = requests.get(f'http://192.168.6.175:9200/_data_stream/{index}')
-                        if response.status_code == 200:
-                            data_stream_info = response.json()
-                            backing_indices = data_stream_info['data_streams'][0].get('indices', [])
-                            
-                            if backing_indices:
-                                # Get the latest (most recent) backing index
-                                latest_index_name = backing_indices[-1]['index_name']
-                                print("lattttttttttttttttttttttt")
-                                print(latest_index_name)
-                                fields = field_response[latest_index_name]['mappings']['properties']
-                                print(fields)
-                                # Filter fields to only include those of type 'date'
-                                date_fields = {field_name: field_info for field_name, field_info in fields.items() if field_info.get('type') == 'date'}
-                                print(date_fields)
-                    else:
-                        fields = field_response[index]['mappings']['properties']
-                        print(fields)
-                        # Filter fields to only include those of type 'date'
-                        date_fields = {field_name: field_info for field_name, field_info in fields.items() if field_info.get('type') == 'date'}
-                        print(date_fields)
+            if specific_alias in data['aliases']:
+                alias_found = True
+                field_response = es.indices.get_mapping(index=index)
+                fields = field_response[index]['mappings']['properties']
+                
+                if work_type == 'datastream':
+                    ds_response = requests.get(f'http://192.168.6.175:9200/_data_stream/{index}', timeout=10)
+                    ds_response.raise_for_status()
+                    data_stream_info = ds_response.json()
+                    backing_indices = data_stream_info['data_streams'][0].get('indices', [])
+                    latest_index_name = backing_indices[-1]['index_name']
+                    fields = field_response[latest_index_name]['mappings']['properties']
+                
+                date_fields = {field_name: field_info for field_name, field_info in fields.items() if field_info.get('type') == 'date'}
+        
         if alias_found:
-            return {specific_alias: list(date_fields.keys())}  # Return a dictionary with the alias and its date field names
+            return {specific_alias: list(date_fields.keys())}
         else:
             print(f"Alias '{specific_alias}' not found.")
             return None
+    except (RequestException) as e:
+        print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
+        return None
+
             
     except Exception as e:
         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
         return None
   
-def create_data_view_(data_view_index_pattern:str, time_field_name:str, data_view_name:str, auth=None, allow_no_index=False):
+
+es = Elasticsearch([{'host': '192.168.6.175', 'port': 9200, 'scheme': 'http'}])
+
+def fetch_from_elasticsearch(request):
+    alias_name = request.session.get('alias_name', None)
+    print(f"Fetching data from Elasticsearch for alias: {alias_name}")
+    
+    query = {
+        "_source": ["From", "location", "imsi", "To", "duration", "City_name"],
+        "query": {"match_all": {}},
+        "size": 10000
+    }
+    try:
+        response = es.search(index=alias_name, body=query)
+        result = [hit['_source'] for hit in response['hits']['hits']]
+        return JsonResponse(result, safe=False)
+    except ElasticsearchException as e:
+        error_message = {"error": str(e)}
+        return JsonResponse(error_message, status=500)
+
+
+
+def create_data_view_(data_view_index_pattern, time_field_name, data_view_name, auth=None, allow_no_index=False):
     """
     Create a new data view in Kibana.
-
-    :param data_view_name: The title of the new data view.
-    :param time_field_name: The name of the time field in the index (e.g., "@timestamp").
-    :param data_view_index_pattern: Comma-separated list of data streams, indices, and aliases to search.
-    :param auth: Optional tuple (username, password) for Basic Authentication.
-    :param allow_no_index: Allow the data view to exist without any index data.
-    :return: The response from the Kibana API.
     """
-  
     data_view_payload = {
         "data_view": {
-            'name':data_view_name,
+            'name': data_view_name,
             "title": data_view_index_pattern,
             "timeFieldName": time_field_name,
             "allowNoIndex": allow_no_index,
-            # "fields": {},  # Optional: You can specify field formats here
-            # "runtimeFieldMap": {},  # Optional: Add runtime fields if needed
-            # "sourceFilters": [],  # Optional: Specify source filters if needed
-            # "namespaces": ["default"]  # Default namespacee
         }
     }
-
-    # Construct the API endpoint for creating a data view
     endpoint = f"{kibana_host}/api/data_views/data_view"
-
-    # Make the POST request to create the data view
-    response = requests.post(endpoint, headers=headers, data=json.dumps(data_view_payload), auth=auth)
-
-    if response.status_code == 200:
+    try:
+        response = requests.post(endpoint, headers=headers, data=json.dumps(data_view_payload), auth=auth, timeout=10)
+        response.raise_for_status()
         print("Data view created successfully.")
         return response.json()
-    else:
-        print(f"Failed to create data view: {response.status_code} - {response.text}")
+    except RequestException as e:
+        print(f"Failed to create data view: {e}")
         return None
+
 def get_data_views(auth=None):
     """
     Get all data views from Kibana.
@@ -485,6 +481,44 @@ def get_data_views(auth=None):
     else:
         print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
         return None
+import requests
+
+def get_data_view_id_by_name(data_view_name, auth=None):
+    """
+    Get the ID of a specific data view from Kibana by its name.
+
+    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+    :param data_view_name: The name of the data view to look for.
+    :param auth: Optional tuple (username, password) for Basic Authentication.
+    :return: The ID of the data view or None if not found or request fails.
+    """
+    
+    # Construct the API endpoint for getting data views
+    endpoint = f"{kibana_host}/api/data_views"
+
+    # Set up headers, including authorization if provided
+    headers = {
+        "kbn-xsrf": "true",  # Kibana requires this header for all API requests
+    }
+    
+    if auth:
+        response = requests.get(endpoint, headers=headers, auth=auth)
+    else:
+        response = requests.get(endpoint, headers=headers)
+
+    if response.status_code == 200:
+        data_views = response.json().get('data_view', [])
+        
+        for data_view in data_views:
+            if data_view.get('name') == data_view_name:
+                # Return the ID of the matched data view
+                return data_view.get('id')
+        
+        print(f"Data view with name '{data_view_name}' not found.")
+        return None
+    else:
+        print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
+        return None
 
 def data_view(request):
     
@@ -507,38 +541,61 @@ def create_data_view(request):
     time_field_name = request.POST.get('time-field-name')
     create_data_view_(data_view_index_pattern=alias_name,time_field_name=time_field_name,data_view_name=workspace_name)
     return redirect("dashborad")
-def get_all_dashboards( ):
-    """
-    Get all dashboards from Kibana.
+    import requests
+from requests.exceptions import RequestException
 
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
-    :param auth: Optional tuple (username, password) for Basic Authentication.
-    :return: List of dashboards or None if the request fails.
-    """
-    
 
-    # Construct the API endpoint for getting dashboards
+
+def get_dashboard_id_by_name(dashboard_name):
     endpoint = f"{kibana_host}/api/saved_objects/_find?type=dashboard"
-
-    # Make the GET request to retrieve all dashboards
-    response = requests.get(endpoint, headers=headers,)
-
-    if response.status_code == 200:
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=10)
+        response.raise_for_status()
         dashboards = response.json().get('saved_objects', [])
-        dashboards_info = []
-
         for dashboard in dashboards:
-            # Extract the required fields: id and attributes
-            dashboard_info = {
-                'id': dashboard.get('id'),
-                'title': dashboard.get('attributes', {}).get('title')
-            }
-            dashboards_info.append(dashboard_info)
+            if dashboard.get('attributes', {}).get('title') == dashboard_name:
+                print(f"Dashboard '{dashboard_name}' found with ID: {dashboard.get('id')}")
+                return dashboard.get('id')
+        print(f"Dashboard '{dashboard_name}' not found.")
+        return None
+    except RequestException as e:
+        print(f"Failed to retrieve dashboards: {e}")
+        return None
 
+
+def get_all_dashboards():
+    endpoint = f"{kibana_host}/api/saved_objects/_find?type=dashboard"
+    try:
+        response = requests.get(endpoint, headers=headers, timeout=10)
+        response.raise_for_status()
+        dashboards = response.json().get('saved_objects', [])
+        dashboards_info = [
+            {'id': dashboard.get('id'), 'title': dashboard.get('attributes', {}).get('title')}
+            for dashboard in dashboards
+        ]
         print("Retrieved dashboards successfully.")
         return dashboards_info
-    else:
-        print(f"Failed to retrieve dashboards: {response.status_code} - {response.text}")
+    except RequestException as e:
+        print(f"Failed to retrieve dashboards: {e}")
+        return None
+
+def get_data_view_id_by_name(data_view_name, auth=None):
+    endpoint = f"{kibana_host}/api/data_views"
+    headers = {"kbn-xsrf": "true"}
+
+    try:
+        response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
+        response.raise_for_status()
+        data_views = response.json().get('data_view', [])
+
+        for data_view in data_views:
+            if data_view.get('name') == data_view_name:
+                return data_view.get('id')
+
+        print(f"Data view with name '{data_view_name}' not found.")
+        return None
+    except RequestException as e:
+        print(f"Failed to retrieve data views: {e}")
         return None
 
 def get_dashboard_template_attributes(template_dashboard_id):
@@ -568,53 +625,57 @@ def get_dashboard_template_attributes(template_dashboard_id):
         print(f"Failed to retrieve template dashboard: {response.status_code} - {response.text}")
         return None
     
-def create_new_dashboard(template_dashboard_id, new_dashboard_title, new_data_view_id, auth=None):
+def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id):
+    print(original_dashboard_id)
+    print(new_title)
+    print(new_data_view_id)
+    """_summary_  
+    # Function to copy an existing dashboard and assign a new data view
+
+
+    Args:
+        original_dashboard_id (_type_): _description_
+        new_title (_type_): _description_
+        new_data_view_id (_type_): _description_
+
+    Returns:
+        _type_: _description_
     """
-    Create a new dashboard in Kibana based on a template dashboard.
+    # Fetch the original dashboard
+    new_id = uuid.uuid4()
 
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
-    :param template_dashboard_id: The ID of the template dashboard to copy.
-    :param new_dashboard_title: The title for the new dashboard.
-    :param new_data_view_id: The ID of the new data view to set in the dashboard.
-    :param auth: Optional tuple (username, password) for Basic Authentication.
-    :return: The response from the Kibana API.
-    """
-    # Get the attributes of the template dashboard
-    template_attributes = get_dashboard_template_attributes( template_dashboard_id)
+    url = f"{kibana_host}/api/saved_objects/dashboard/{original_dashboard_id}"
 
-    if template_attributes is None:
-        return None
+    
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    original_dashboard = response.json()
 
-    # Update the title and data view ID in the copied attributes
-    template_attributes['title'] = new_dashboard_title
+    new_dashboard = copy.deepcopy(original_dashboard)
+    
 
-    # Replace the data view ID in the attributes (modify this key based on your template structure)
-    if 'dataViewId' in template_attributes:
-        template_attributes['dataViewId'] = new_data_view_id
+    new_dashboard['attributes']['title'] = new_title
 
-    # Prepare the payload for creating a new dashboard
-    new_dashboard_payload = {
-        "attributes": template_attributes
-    }
+    
+    
+    id_value = next((ref['id'] for ref in new_dashboard['references'] if ref['type'] == 'index-pattern'), None)
+    for reference in new_dashboard.get("references", []):
+        if reference.get("id") == id_value:
+            reference["id"] = new_data_view_id
+    
+    # new_dashboard = json.loads(json.dumps(new_dashboard).replace(id_value,new_data_view_id))
+    
+    payload={"attributes": new_dashboard["attributes"],"references":new_dashboard["references"]}    
+    response = requests.post(f"{kibana_host}/api/saved_objects/dashboard/{new_id}", headers=headers,data=json.dumps(payload))
 
-    headers = {
-        'kbn-xsrf': 'true',
-        'Content-Type': 'application/json',
-        'Elastic-Api-Version': '2023-10-31'
-    }
-
-    # Construct the API endpoint for creating a new dashboard
-    endpoint = f"{kibana_host}/api/saved_objects/dashboard"
-
-    # Make the POST request to create the new dashboard
-    response = requests.post(endpoint, headers=headers, data=json.dumps(new_dashboard_payload), auth=auth)
-
+    
+    # Check the result of the POST request
     if response.status_code == 200:
-        print("New dashboard created successfully.")
-        return response.json()
+        # Parse the response to extract the new dashboard's ID
+        new_dashboard_id = response.json()['id']
+        print(f"New dashboard created successfully with ID: {new_dashboard_id}")
     else:
-        print(f"Failed to create new dashboard: {response.status_code} - {response.text}")
-        return None
+        print(f"Failed to create the new dashboard: {response.text}")
 def dashborad(request):
     dashboards = get_all_dashboards()
     print(dashboards)
@@ -623,22 +684,23 @@ def dashborad(request):
     return render(request,'new_dashboard.html',context)
 
 def create_dashborad(request):
-    alias_names = request.session.get('data_view_name', None) 
+    
+    alias_names = request.session.get('data_view_name', None)
+    data_view_id = get_data_view_id_by_name(alias_names)
+    workspace_name = request.session.get('workspace_name', None)
     if request.method == 'POST':
-        dashboard_id = request.POST.get('data-view-id')
-        print("hiiiiiiiiiiiiiiiiiiiiiiiiiiii")
-        print(dashboard_id)
-        print("hiiiiiiiiiiiiiiiiiiiio")
+        dashboard_id = "e0825920-21c5-41ea-a451-e1521233f90f"
         request.session['dashboard_ids'] = dashboard_id
         time.sleep(1)
-        create_new_dashboard(dashboard_id,"index_view",alias_names)
+        create_new_dashboard(dashboard_id,workspace_name,data_view_id)
     return redirect("generate_embed_link")
-
 def generate_embed_link(request):
-    dashboard_idss = request.session.get('dashboard_ids', None) 
-    dashboard_idss = "d8450d9b-830a-4687-aa73-2d33d45f2edd"
+    fetch_from_elasticsearch(request)
+    workspace_name = request.session.get('workspace_name', None)
+    print(workspace_name)
+    dashboardId = "ca157a96-69f9-4505-be92-9255f1e66d3d"
     print ("Generating embed link")
-    print(dashboard_idss)
+    
     """
     Generate an HTML iframe embed link for a specified Kibana dashboard.
 
@@ -664,9 +726,9 @@ def generate_embed_link(request):
         with the generated iframe embed link as context.
     """
     embed_params = "?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3Anow-15m%2Cto%3Anow))&show-query-input=true&show-time-filter=true&hide-filter-bar=true"
-    embed_link = f"<iframe src='{kibana_host}/app/dashboards#/view/{dashboard_idss}{embed_params}' height='600' width='950'></iframe>"
+    embed_link = f"<iframe src='{kibana_host}/app/dashboards#/view/{dashboardId}{embed_params}' height='600' width='950'></iframe>"
 
-    return render(request, 'generate_embed_link.html', context={'embed_link': embed_link})
+    return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.17.101:8000/manage/fetch_data/"})
 
 
                                   #  DATA STREAM LIST OF FUNCTIONS
@@ -675,6 +737,7 @@ def generate_embed_link(request):
 
 # DATA STREAM LIST OF FUNCTION
 
+# <iframe src="http://192.168.6.175:5601/app/dashboards#/view/e0825920-21c5-41ea-a451-e1521233f90f?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3A'2023-01-14T04%3A40%3A59.269Z'%2Cto%3A'2023-01-14T04%3A41%3A21.251Z'))&show-query-input=true&show-time-filter=true" height="600" width="800"></iframe>
 
 
    
@@ -688,7 +751,7 @@ def display_data_stream_mapping(request,selectedDatabase):
     Parameters:
     - data_stream_name: The name of the selected data stream.
     """
-    response = requests.get(f'http://192.168.6.175:9200/_data_stream/{selectedDatabase}')
+    response = requests.get(f'http://192.168.6.12:9200/_data_stream/{selectedDatabase}')
     if response.status_code == 200:
         data_stream_info = response.json()
         backing_indices = data_stream_info['data_streams'][0].get('indices', [])
@@ -696,10 +759,11 @@ def display_data_stream_mapping(request,selectedDatabase):
         if backing_indices:
             # Get the latest (most recent) backing index
             latest_index_name = backing_indices[-1]['index_name']
-            
+            print(latest_index_name)
             # Retrieve and display the mapping for the latest backing index
-            mapping_response = requests.get(f'http://192.168.6.175:9200/{latest_index_name}/_mapping')
-            
+            mapping_response = requests.get(f'http://192.168.6.12:9200/{selectedDatabase}/_mapping')
+            datastream_mapping = mapping_response.json()
+            pretty_json = jas
             if mapping_response.status_code == 200:
                 mapping = mapping_response.json()
                 properties = mapping[latest_index_name]['mappings']['properties']
@@ -740,16 +804,55 @@ def display_data_stream_mapping(request,selectedDatabase):
 
 
 
+# For data enrichiment
+def police_page(request):
+    list_indices = list_user_indices()
+    
+    return render(request,'Enrich_template/Create_police.html',context={
+                'list_indices': list_indices,
+            })
+
+def search_page(request):
+    list_indices = list_user_indices()
+    return render(request,'search.html',context={
+                'list_indices': list_indices,
+            })
 
 
 
+def create_police(request):
+    global police_name
+    if request.method == 'POST':
+        police_name = request.POST.get('police_name')
+        index_name = request.POST.get('database_type')
+        match_field = request.POST.get('match_field')
+        columns = request.POST.getlist('columns[]')
+        print(police_name)
+        print(index_name)
+        print(match_field)
+        print(columns)
+        request.session['police_name'] = police_name
+        return redirect("excute_page")
 
+def excute_page(request):
+    police_name = request.session.get('police_name', None)
+    
+    context = {
+        'police_name': police_name # Add aliases to context
+    }
+    return render(request, 'Enrich_template/excute_page.html', context)
+def create_excute(request):
 
+    police_name = request.session.get('police_name', None)
+    
+    return redirect("ingestion_pipeline_page")
 
-
-
-
-
-
+def ingestion_pipeline_page(request):
+    police_name = request.session.get('police_name', None)
+    
+    context = {
+        'police_name': police_name # Add aliases to context
+    }
+    return render(request, 'Enrich_template/ingestion_pipeline.html', context)
 
 

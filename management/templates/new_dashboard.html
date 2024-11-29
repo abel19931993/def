@@ -1,35 +1,36 @@
-{% extends 'base.html'%} {% load static %} {% block content %}
+{% extends 'base.html'%}
+{% load static %}
+{% block content %}
 <div class="row">
     <div class="col-xl-12">
         <div class="card">
             <div class="card-body">
-                <form action="{% url 'create_dashborad' %}" method="post" enctype="multipart/form-data">
+                <form action="{% url 'create_dashborad' %}" method="post" enctype="multipart/form-data" id="dashboardForm">
                     {% csrf_token %}
+                    
+                    <!-- Alert container for validation messages -->
+                    <div id="alert-container"></div>
+
                     <div class="row mb-4">
-                        <label for="workspace_name" class="col-sm-6 col-form-label"><h3>select dashboard</h3></label>
-                       
-                    </div> 
+                        <label for="workspace_name" class="col-sm-6 col-form-label"><h3>Select Dashboard</h3></label>
+                    </div>
+
                     <div class="row">
-                         <div class="col-sm-6">
-                                
-                                    <div class="row mb-4">
-                                        <label for="formFile" class="col-sm-3 col-form-label">dashborad</label>
-                                        <div class="col-sm-9">
-                                            <select id="columnSelect" name="data-view-id" class="form-control mt-2 ">
-                                                <option value="">select dashboard id</option>
-                                                {% for dashboard in dashboards %}
-                                                <option value="{{ dashboard.id }}">{{ dashboard.title }}</option>
-                                            {% endfor %}
-                                            </select>
-                                        </div>
-                                    </div>
-                        </div>
-                        <div class="col-sm-6 ">
-                                    
-                                      
-                                    
+                        <div class="col-sm-6">
+                            <div class="row mb-4">
+                                <label for="formFile" class="col-sm-3 col-form-label">Dashboard</label>
+                                <div class="col-sm-9">
+                                    <select id="columnSelect" name="data-view-id" class="form-control mt-2">
+                                        <option value="">--Select Dashboard ID--</option>
+                                        {% for dashboard in dashboards %}
+                                            <option value="{{ dashboard.id }}">{{ dashboard.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>    
+
                     <div class="row mb-4">
                         <div class="col-sm-9 offset-sm-3">
                             <button type="submit" class="btn btn-primary">Submit</button>
@@ -39,58 +40,41 @@
             </div>
         </div>
     </div>
-
-    
 </div>
-        <script>
-            document.getElementById('database_type').addEventListener('change', function() {
-                const selectedDatabase = this.value;
-                const columnsContainer = document.getElementById('columnsContainer');
 
-                columnsContainer.innerHTML = ''; // Clear previous options
-                // Fetch columns based on the selected database
-                fetch( `select_index/${selectedDatabase}`) // Update the URL as per your routing
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok ' + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.columns && data.columns.length > 0) {
-                            data.columns.forEach(column => {
-                                
-                                const div = document.createElement('div');
-                                div.className = 'form-check mb-3';
-                                
-                                // Create a label for the checkbox
-                                const label = document.createElement('label');
-                                
-                                // Create the checkbox input
-                                const checkbox = document.createElement('input');
-                                checkbox.type = 'checkbox';
-                                checkbox.value = column; // Value that will be sent on form submission
-                                checkbox.name = 'columns[]'; // This allows Django to group the values
-                                checkbox.className = 'form-check-input'; // Optional: Add a class for styling
-                                
-                                // Set the text for the label
-                                label.textContent = column;
-                                label.className = 'form-check-label'; // Optional: Add a class for styling
-                                
-                                // Append the checkbox to the label
-                                label.prepend(checkbox);
-                                
-                                // Append the label to the div
-                                div.appendChild(label);
-                                
-                                // Append the div to your container (e.g., a div)
-                                columnsContainer.appendChild(div);
-                            });
-                        } else {
-                            console.error('No columns found in the response.');
-                        }
-                    })
-                    .catch(error => console.error('Error fetching columns:', error));
-            });
-        </script>
-        {% endblock %}
+<script>
+    // Add form validation before submission
+    document.getElementById('dashboardForm').addEventListener('submit', function(event) {
+        event.preventDefault();  // Prevent the form from submitting immediately
+
+        const columnSelect = document.getElementById('columnSelect');
+        const alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = ''; // Clear any previous alerts
+
+        let formValid = true;
+        let alertMessage = '';
+        let alertType = 'danger'; // Default to error message
+
+        // Validate if a dashboard has been selected
+        if (!columnSelect.value) {
+            alertMessage = 'Please select a dashboard.';
+            formValid = false;
+        }
+
+        // If the form is not valid, show an alert message
+        if (!formValid) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${alertType} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <strong>Error!</strong> ${alertMessage}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+        } else {
+            // If valid, submit the form
+            this.submit();
+        }
+    });
+</script>
+{% endblock %}

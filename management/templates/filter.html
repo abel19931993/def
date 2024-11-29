@@ -1,72 +1,78 @@
-{% extends 'base.html'%} {% load static %} {% block content %}
+{% extends 'base.html' %}
+{% load static %} 
+{% block content %}
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card">
+                <div class="card-body">
+                    <form action="{% url 'create_alices' %}" method="post" enctype="multipart/form-data" id="workspaceForm">
+                        {% csrf_token %}
+                        
+                        <!-- Add alert container -->
+                        <div id="alert-container"></div>
 
-        <div class="row">
-            <div class="col-xl-12">
-                <div class="card">
-                    <div class="card-body">
-                        <form action="{% url 'create_alices' %}" method="post" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <div class="row mb-4">
-                                <label for="workspace_name" class="col-sm-3 col-form-label">Workspace Name:</label>
-                                <div class="col-sm-3">
-                                    <input type="text" name="workspace_name" id="workspace_name" value="{{ workspace_name }}" class="form-control" style="border: none; outline: none; background: transparent; font-weight: bold; font-size: 20px;" readonly>  
+                        <div class="row mb-4">
+                            <label for="workspace_name" class="col-sm-3 col-form-label">Workspace Name:</label>
+                            <div class="col-sm-3">
+                                <input type="text" name="workspace_name" id="workspace_name" value="{{ workspace_name }}" class="form-control" style="border: none; outline: none; background: transparent; font-weight: bold; font-size: 20px;" readonly>  
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="row mb-4">
+                                    <label for="database_type" class="col-sm-3 col-form-label">Select dataset:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select" name="database_type" id="database_type" required>
+                                            {% for db in supported_database %}
+                                                <option value="{{ db }}">{{ db }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-4">
+                                    <label class="col-sm-3 col-form-label">Upload Method</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select" id="upload_method">
+                                            <option value="csv">Upload CSV</option>
+                                            <option value="manual">Manual Entry</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div id="csvUpload" class="row mb-4">
+                                    <label for="formFile" class="col-sm-3 col-form-label">Choose CSV file</label>
+                                    <div class="col-sm-9">
+                                        <input class="form-control" type="file" id="csv_file" name="csv_file" accept=".csv">
+                                    </div>
+                                </div>
+
+                                <div id="manualEntry" class="row mb-4" style="display: none;">
+                                    <div id="manualFieldsContainer" class="col-sm-9"></div>
+                                </div> 
+                            </div>
+
+                            <div class="col-sm-6">
+                                <label for="columns-select" class="col-sm-3 col-form-label offset-sm-3"><h4>Columns</h4></label>
+                                <div id="columnsContainer" class="col-sm-9 offset-sm-3">
+                                    <!-- Column selection elements will be dynamically added here -->
                                 </div>
                             </div>
-        
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <div class="row mb-4">
-                                        <label for="database_type" class="col-sm-3 col-form-label">Selecte dataset:</label>
-                                        <div class="col-sm-9">
-                                            <select class="form-select" name="database_type" id="database_type" required>
-                                                {% for db in supported_database %}
-                                                    <option value="{{ db }}">{{ db }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                    </div>
-        
-                                    <div class="row mb-4">
-                                        <label class="col-sm-3 col-form-label">Upload Method</label>
-                                        <div class="col-sm-9">
-                                            <select class="form-select" id="upload_method">
-                                                <option value="csv">Upload CSV</option>
-                                                <option value="manual">Manual Entry</option>
-                                            </select>
-                                        </div>
-                                    </div>
-        
-                                    <div id="csvUpload" class="row mb-4">
-                                        <label for="formFile" class="col-sm-3 col-form-label">Choose CSV file</label>
-                                        <div class="col-sm-9">
-                                            <input class="form-control" type="file" id="csv_file" name="csv_file" accept=".csv" >
-                                        </div>
-                                    </div>
-        
-                                    <div id="manualEntry" class="row mb-4" style="display: none;">
-                                        <div id="manualFieldsContainer" class="col-sm-9"></div>
-                                    </div> 
-                                </div>
-        
-                                <div class="col-sm-6">
-                                    <label for="columns-select" class="col-sm-3 col-form-label offset-sm-3"><h4>Columns</h4></label>
-                                    <div id="columnsContainer" class="col-sm-9 offset-sm-3">
-                                        <!-- Column selection elements will be dynamically added here -->
-                                    </div>
-                                </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-sm-9 offset-sm-3">
+                                <button type="submit" class="btn btn-primary">Submit</button>
                             </div>
-        
-                            <div class="row mb-4">
-                                <div class="col-sm-9 offset-sm-3">
-                                    <button type="submit" class="btn btn-primary">Submit</button>
-                                </div>
-                            </div> 
-                        </form>
-                    </div>
+                        </div> 
+                    </form>
                 </div>
             </div>
         </div>
-       <script> 
+    </div>
+
+    <script> 
         document.getElementById('database_type').addEventListener('change', function() {
             const selectedDatabase = this.value;
             const columnsContainer = document.getElementById('columnsContainer');
@@ -119,39 +125,90 @@
                 manualEntry.style.display = 'block';
             }
         });
-        
+
         // Add event listener to checkboxes in the columnsContainer
         document.getElementById('columnsContainer').addEventListener('change', function(event) {
+            const container = document.getElementById('manualFieldsContainer');
+            
+            // If the checkbox is checked, create a text area
             if (event.target.type === 'checkbox') {
-                const container = document.getElementById('manualFieldsContainer');
-                
-                // If the checkbox is checked, create a text area
                 if (event.target.checked) {
                     const label = document.createElement('label');
                     label.textContent = `${event.target.value}:`;
                     label.className = 'form-label';
 
                     const textArea = document.createElement('textarea');
-                    textArea.name = `${event.target.value}`; // Unique name for each field
+                    textArea.name = `manual_field_${event.target.value}`; // Unique name for each field
                     textArea.className = 'form-control mb-2';
                     textArea.placeholder = `Value for ${event.target.value}`;
                   
                     container.appendChild(label);
                     container.appendChild(textArea);
                 } else {
-                      // Remove the corresponding label and text area if unchecked
-            const label = container.querySelector(`label:contains('Value for ${event.target.value}:')`);
-            const textArea = container.querySelector(`textarea[name='manual_field_${event.target.value}']`);
-            if (label) {
-                container.removeChild(label);
-            }
-            if (textArea) {
-                container.removeChild(textArea);
-            }
+                    // Remove the corresponding label and text area if unchecked
+                    const label = container.querySelector(`label:contains('Value for ${event.target.value}:')`);
+                    const textArea = container.querySelector(`textarea[name='manual_field_${event.target.value}']`);
+                    if (label) container.removeChild(label);
+                    if (textArea) container.removeChild(textArea);
                 }
             }
         });
-        
-    </script>  
 
-  {% endblock %}
+        // Form validation before submission
+        document.getElementById('workspaceForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting immediately
+
+            const databaseType = document.getElementById('database_type').value;
+            const uploadMethod = document.getElementById('upload_method').value;
+            const csvFile = document.getElementById('csv_file').files.length;
+            const columnsSelected = Array.from(document.querySelectorAll('input[name="columns[]"]:checked')).length;
+            const manualFields = Array.from(document.querySelectorAll('#manualFieldsContainer textarea')).filter(textarea => textarea.value.trim() !== '').length;
+
+            let formValid = true;
+            let alertMessage = '';
+            let alertType = 'danger'; // Default to 'danger' for errors
+
+            // Validate database type
+            if (!databaseType) {
+                alertMessage = 'Please select a database.';
+                formValid = false;
+            }
+
+            // Validate CSV file if the method is CSV
+            if (uploadMethod === 'csv' && csvFile === 0) {
+                alertMessage = 'Please choose a CSV file.';
+                formValid = false;
+            }
+
+            // Validate columns selection
+            if (columnsSelected === 0) {
+                alertMessage = 'Please select at least one column.';
+                formValid = false;
+            }
+
+            // Validate manual entry fields
+            if (uploadMethod === 'manual' && manualFields === 0) {
+                alertMessage = 'Please provide values for at least one manual entry field.';
+                formValid = false;
+            }
+
+            // If form is valid, submit it
+            if (formValid) {
+                this.submit();
+            } else {
+                // Display styled alert message
+                const alertContainer = document.getElementById('alert-container');
+                alertContainer.innerHTML = ''; // Clear previous alerts
+
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${alertType} alert-dismissible fade show`;
+                alertDiv.role = 'alert';
+                alertDiv.innerHTML = `
+                    <strong>Error!</strong> ${alertMessage}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                alertContainer.appendChild(alertDiv);
+            }
+        });
+    </script>
+{% endblock %}

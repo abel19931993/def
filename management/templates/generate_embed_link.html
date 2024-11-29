@@ -1,33 +1,103 @@
-{% extends 'base.html'%} {% load static %} {% block content %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
 <style>
-    .iframe-container {
-        position: relative;
-        width: 100%;
-        height: 0;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio (adjust as needed) */
-        overflow: hidden;
-    }
-    
-    .iframe-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-    }
+  .c-mobile-view {
+  position: relative;
+  margin: 120px auto 0;
+  width: 320px;
+  height: 568px;
+  background: url("https://www.lucapagot.it/mobile-codepen.jpg");
+  background-position: bottom;
+  background-size: cover;
+  animation: fadein .5s .1s forwards;
+  box-shadow: 0 0 60px rgba(0, 0, 0, .6);
+  border-radius: 30px;
+}
+
+.c-mobile-view:before {
+  position: absolute;
+  content: '';
+  display: block;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  box-shadow: inset 0 -1px 3px rgba(0, 0, 0, .2);
+  border-radius: 30px;
+  box-sizing: border-box;
+}
+
+.c-mobile-view__inner {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  border-radius: 30px;
+}
+
+.copy-button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+.copy-button:hover {
+  background-color: #0056b3;
+}
+
 </style>
-        <div class="row">
-            <div class="col-xl-12">
-                <div class="card">
-                    <div class="iframe-container">
-                        {{ embed_link|safe }}
-                    </div>
-                </div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            
+                <button id="copyButton" class="copy-button">Copy URL</button>
+            </div>
+           
+            <div class="iframe-container">
+                {{ embed_link|safe }}
             </div>
         </div>
-       <script> 
-        
-        
-    </script>  
+    </div>
+</div>
 
-  {% endblock %}
+<script>
+    // JavaScript to copy URL to clipboard
+    document.getElementById("copyButton").addEventListener("click", function() {
+        // Get the URL (assuming embed_link contains the URL or the src)
+        var url = "{{ link }}";  // This assumes embed_link is a valid URL.
+
+        // Create a temporary input element to hold the URL
+        var tempInput = document.createElement("input");
+        document.body.appendChild(tempInput);
+        tempInput.value = url;
+        
+        // Select and copy the content of the input
+        tempInput.select();
+        document.execCommand("copy");
+
+        // Remove the temporary input
+        document.body.removeChild(tempInput);
+
+        // Toggle the button text
+        var button = document.getElementById("copyButton");
+        button.textContent = "Copied!";
+        
+        // Optionally, show a success message
+        alert("URL copied to clipboard!");
+
+        // Reset the button text after 2 seconds
+        setTimeout(function() {
+            button.textContent = "Copy URL";
+        }, 2000);
+    });
+</script>
+
+{% endblock %}
