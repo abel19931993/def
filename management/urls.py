@@ -8,6 +8,13 @@ from rest_framework_simplejwt import views as jwt_views
 
 urlpatterns = [
        # url for data enrichment process
+
+
+    path('register/',registerPage, name='registerPage'),
+    path('login/',loginPage, name='loginPage'),
+    path('logout/',logoutUser, name='logoutUser'),
+
+
     path('police_page/',police_page, name='police_page'),
     path('search_page/',search_page, name='search_page'),
     path('create_police/',create_police, name='create_police'),

@@ -23,8 +23,13 @@ from django.shortcuts import render,redirect
 from .serializers import *
 from rest_framework.permissions import IsAuthenticated
 import uuid
+# from django.contrib.auth.forms import CreateUserForm
+from .forms import CreateUserForm
 # from elasticsearch.exceptions import ElasticsearchException
 from requests.exceptions import RequestException
+from django.contrib import messages
+from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth.decorators import login_required
 # Kibana server details
 kibana_host = "http://192.168.6.175:5601" 
 es_host = "http://192.168.6.175:9200"
@@ -33,9 +38,63 @@ headers = {
     'kbn-xsrf': 'true'  # Required header for Kibana API requests
 }
 
+def registerPage(request):
+    print("hi;")
+    form = CreateUserForm()
+    if request.method == 'POST':
+        form = CreateUserForm(request.POST) 
+        if form.is_valid():
+            form.save()
+            user  = form.cleaned_data.get('username')
+            messages.success(request, "Account was created for "+user)
+            return redirect('loginPage')
+    context = {'form':form}
+    return render(request,'register.html',context)
 
-    # Return the result as JSON response
-#     return JsonResponse(result, safe=False, json_dumps_params={'indent': 4})
+def loginPage(request):
+    if request.method == 'POST':
+      username =  request.POST.get('username')
+      password =  request.POST.get('password')
+      user = authenticate(request,username = username,password=password)
+      if user is not None:
+        login(request,user)
+        return redirect('index_view')
+      else:
+        messages.info(request,"Username OR password is incorrect")
+        # return render(request,'login.html')
+    context = {}
+    return render(request,'login.html',context)
+
+def logoutUser(request):
+    logout(request)
+    return redirect('loginPage')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class SystemUserStaffPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         # Check if any of the required permissions are met
@@ -58,6 +117,7 @@ def list_user_indices():
     except RequestException as e:
         print(f"Error fetching user indices: {e}")
         return []
+@login_required(login_url='loginPage')
 def get_data_views(auth=None):
     """
     Get all data views from Kibana.
@@ -139,7 +199,7 @@ def create_workspace(request):
         'supported_database': list_user_indices(),
         'workspace_name': workspace_name  # Pass the workspace name to the template
     })
-
+@login_required(login_url='loginPage')
 def index_view(request):
     print("above index viewwwwwwwwwww")
     print(get_data_views())
@@ -763,7 +823,8 @@ def display_data_stream_mapping(request,selectedDatabase):
             # Retrieve and display the mapping for the latest backing index
             mapping_response = requests.get(f'http://192.168.6.12:9200/{selectedDatabase}/_mapping')
             datastream_mapping = mapping_response.json()
-            pretty_json = jas
+            import pprint
+            pprint.pprint(datastream_mapping)
             if mapping_response.status_code == 200:
                 mapping = mapping_response.json()
                 properties = mapping[latest_index_name]['mappings']['properties']
