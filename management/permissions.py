@@ -1,31 +1,8 @@
-# from rest_framework import permissions
+from rest_framework.permissions import BasePermission
 
-# from .models import *
-
-
-# class IsAllower(permissions.BasePermission):
-#     def has_permission(self, request, view):
-#         return (
-#             request.user.is_authenticated
-#             and request.user.user_role.role_name == "allower"
-#         )
-
-# class IsOperator(permissions.BasePermission):
-#     def has_permission(self, request, view):
-#         return (
-#             request.user.is_authenticated
-#             and request.user.user_role.role_name == "operator"
-#         )
-# class IsRequester(permissions.BasePermission):
-#     def has_permission(self, request, view):
-#         return (
-#             request.user.is_authenticated
-#             and request.user.user_role.role_name == "requester"
-#         )
-
-# class IsAdmin(permissions.BasePermission):
-#     def has_permission(self, request, view):
-#         return (
-#             request.user.is_authenticated
-#             and request.user.user_role.role_name == "admin"
-#         )
+class HasRole(BasePermission):
+    def has_permission(self, request , view):
+        required_role = getattr(view, 'required_role',None)
+        if required_role:
+            return request.user.user_roles.filter(role_name=required_role)
+        return super().has_permission(request, view)

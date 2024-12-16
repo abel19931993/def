@@ -1,115 +1,160 @@
 import requests
 import json,copy
-from elasticsearch import Elasticsearch
 import time
+from datetime import datetime
 import csv
-from rest_framework.response import Response
-from rest_framework import permissions, status
-from django.http import HttpResponse, JsonResponse
-from rest_framework import status
-from django.contrib.auth.hashers import make_password 
-import os
+from django.contrib.auth.models import Permission
 from django.conf import settings
+from django.http import HttpResponse, JsonResponse
+import os
 from django.core.files.storage import FileSystemStorage
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
 from .serializers import *
 from .permissions import *
 from .models import *
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.views import APIView
-from django.shortcuts import render,redirect
+from django.shortcuts import render,redirect,get_object_or_404
 from .serializers import *
-from rest_framework.permissions import IsAuthenticated
 import uuid
-# from django.contrib.auth.forms import CreateUserForm
-from .forms import CreateUserForm
-# from elasticsearch.exceptions import ElasticsearchException
+from elasticsearch import Elasticsearch
+from requests.exceptions import RequestException
+from typing import Dict
+import elasticsearch.exceptions as ElasticsearchException
+from django.core.paginator import Paginator
+
+import pprint
 from requests.exceptions import RequestException
 from django.contrib import messages
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
-# Kibana server details
-kibana_host = "http://192.168.6.175:5601" 
-es_host = "http://192.168.6.175:9200"
-headers = {
-    'Content-Type': 'application/json',
-    'kbn-xsrf': 'true'  # Required header for Kibana API requests
-}
+from django.views.decorators.csrf import csrf_protect
 
-def registerPage(request):
-    print("hi;")
-    form = CreateUserForm()
-    if request.method == 'POST':
-        form = CreateUserForm(request.POST) 
-        if form.is_valid():
-            form.save()
-            user  = form.cleaned_data.get('username')
-            messages.success(request, "Account was created for "+user)
-            return redirect('loginPage')
-    context = {'form':form}
-    return render(request,'register.html',context)
+from rest_framework import generics
+from rest_framework.permissions import AllowAny,IsAuthenticated
+from rest_framework import status 
+from django.contrib.auth.models import User
+from .serializers import RegisterSerializer,ResourceSerializer,LoginSerializer
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework_simplejwt.tokens import RefreshToken
+# def getlanguges(request):
+    
+#     token=request.session.get('auth_token')
+#     print("SUCCESS",token)
 
-def loginPage(request):
-    if request.method == 'POST':
-      username =  request.POST.get('username')
-      password =  request.POST.get('password')
-      user = authenticate(request,username = username,password=password)
-      if user is not None:
-        login(request,user)
-        return redirect('index_view')
-      else:
-        messages.info(request,"Username OR password is incorrect")
-        # return render(request,'login.html')
-    context = {}
-    return render(request,'login.html',context)
+#     Token=f"Token {token}"
+#     headers = {
+#     "Authorization": Token,
+#     "Content-Type": "application/json",
+#      }
+#     api_response = requests.get(f"{url}/language_public/",headers=headers).json()
+#     languages = api_response.get("data", [])
+    
+#     return [{"code": lang["language_code"], "name": lang["language_name"]}
+#                            for lang in languages]
+#                            headers = {
+#     'Content-Type': 'application/json',
+#     'kbn-xsrf': 'true'  # Required header for Kibana API requests
+# }
 
-def logoutUser(request):
-    logout(request)
-    return redirect('loginPage')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class SystemUserStaffPermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        # Check if any of the required permissions are met
-        return request.user.is_authenticated and (
-           IsAdmin().has_permission(request, view)
-        )
-workspace_name = None 
-police_name = None 
+workspace_name = None  
 alias_name = None
-data_view_name = None
+data_view_id = None
 dashboard_ids = None
 work_type = None
+auth_token = None
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class  = RegisterSerializer
+from django.contrib.auth import authenticate
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .serializers import UserSerializer
+
+# @api_view(['POST'])
+def login_view(request):
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+    print(username)
+    user = authenticate(username=username, password=password)
+    if user is not None:
+            refresh = RefreshToken.for_user(user)
+            user_serializer = UserSerializer(user)
+            request.session['auth_token'] = str(refresh.access_token)
+            print(str(refresh.access_token))
+            login(request, user)
+            return redirect('list_user_workspaces')
+            
+    return redirect('loginPage')
+def loginPage(request):
+    tabss = [
+            {"id": "Content"}
+            ]
+    context = {
+            'tabs':  tabss
+            # Add more context variables as neededS
+            }
+    return render(request,'login.html',context)
+
+def logout_view(request):
+    logout(request)
+    request.session.clear()
+    messages.success(request, "You have been logged out successfully and all sessions have been cleared.")
+    return redirect('loginPage')
+
+class WorkspaceListCreateView(generics.ListCreateAPIView):
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def perform_create(self,serializer):
+        serializer.save(created_by=self.request.user)
+def list_user_workspaces(request):
+    resource_serializer_responce = ResourceSerializer(Resource.objects.filter(created_by__id = request.user.id), many=True)
+    data = resource_serializer_responce.data
+    print(request.user)
+    recent_workspaces = {'recent_workspaces':data}
+    return render(request,'welcome_page.html',context = recent_workspaces)
+def list_user_workspacesss(request, workspace_id):
+    resource = get_object_or_404(Resource, id=workspace_id)
+    resource_serializer_responce = ResourceSerializer(resource)
+    data = resource_serializer_responce.data
+    request.session['dashboard_ids'] = data['dashboard_id']
+    
+    print("abellllllll")
+    context = {
+            'workspace':  data
+            # Add more context variables as neededS
+            }
+    
+    return render(request, 'manage_workspace_page.html',context)
+
+    
+
+
+
+
+class WorkspaceDetailView(generics.RetrieveUpdateDestroyAPIView):
+
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Resource.objects.filter(created_by=self.request.user)
+
+
+
+
+headers = {
+        'Content-Type': 'application/json',
+          # Example of including an authorization header if needed
+    }
 def list_user_indices():
     try:
-        response = requests.get('http://192.168.6.175:9200/_cat/indices?v&h=index&format=json', timeout=10)
+        endpoint = f"{settings.ES_HOST}/_cat/indices?v&h=index&format=json"
+        response = requests.get(endpoint, headers=headers,timeout=10)
         response.raise_for_status()
         all_indices = response.json()
         user_indices = [index['index'] for index in all_indices if not index['index'].startswith('.')]
@@ -117,12 +162,12 @@ def list_user_indices():
     except RequestException as e:
         print(f"Error fetching user indices: {e}")
         return []
-@login_required(login_url='loginPage')
+
 def get_data_views(auth=None):
     """
     Get all data views from Kibana.
     """
-    endpoint = f"{kibana_host}/api/data_views"
+    endpoint = f"{settings.KIBANA_HOST}/api/data_views"
     try:
         response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
         response.raise_for_status()
@@ -141,11 +186,10 @@ def get_data_views(auth=None):
     except RequestException as e:
         print(f"Failed to retrieve data views: {e}")
         return None
-
     
 def get_data_stream_names():
     try:
-        response = requests.get('http://192.168.6.12:9200/_data_stream', timeout=10)
+        response = requests.get(settings.ES_HOST+'/_data_stream', timeout=10)
         response.raise_for_status()
         all_data_streams = response.json()
         data_stream_names = [
@@ -157,10 +201,7 @@ def get_data_stream_names():
     except RequestException as e:
         print(f"Error fetching data stream names: {e}")
         return []
-
-
 # Example usage
-kibana_host = "http://192.168.6.175:5601"
 template_dashboard_id = "your_template_dashboard_id"  # Replace with the actual template dashboard ID
 new_dashboard_title = "My New Dashboard"
 new_data_view_id = "your_new_data_view_id"  # Replace with the actual data view ID
@@ -178,6 +219,7 @@ def create_workspace(request):
     if work_type == 'index':
             # Call the list_user_indices() function to get the supported databases for Indic
             supported_database = list_user_indices()
+            print(supported_database)
             # Pass the data to the filter.html template
             return render(request, 'filter.html', context={
                 'supported_database': supported_database,
@@ -195,20 +237,15 @@ def create_workspace(request):
     else:
             # If the work_type is invalid (not 'indic' or 'datastream')
         return HttpResponse("Invalid work type", status=400)
-    return render(request, 'filter.html', context={
-        'supported_database': list_user_indices(),
-        'workspace_name': workspace_name  # Pass the workspace name to the template
-    })
-@login_required(login_url='loginPage')
+    # return render(request, 'filter.html', context={
+    #     'supported_database': list_user_indices(),
+    #     'workspace_name': workspace_name  # Pass the workspace name to the template
+    # })
+# a
+# @allowed_users(allowed_roles=["viewer"])
 def index_view(request):
-    print("above index viewwwwwwwwwww")
-    print(get_data_views())
-    print("inside index viewwwwwwwwwwww")
-    # get_all_dashboards(kibana_host)
     tabss = [
-    {"id": "tab1", "label": "Tab 1",},
-    {"id": "tab2", "label": "Tab 2",},
-    {"id": "tab3", "label": "Tab 3", "content": "Content for Tab 3"}
+    {"id": "Content for Tab 3"}
 ]
     context = {
             'tabs':  tabss
@@ -218,10 +255,10 @@ def index_view(request):
 
 # Step 3: Select index
 def select_index(request, user_indices):
-    print("hiiiiiiiiii")
-    print(user_indices)
     try:
-        response = requests.get(f'http://192.168.6.12:9200/{user_indices}/_mapping')
+        endpoint = f"{settings.ES_HOST}/{user_indices}/_mapping"
+        print(type(endpoint))
+        response = requests.get(endpoint, headers=headers,timeout=10)
         print(response)
         if response.status_code == 200:
             mapping = response.json()
@@ -341,9 +378,7 @@ def create_filter_body(filter_list, field):
                         print(f"Skipping {existing_field} due to empty values.")
                     break
             else:
-                print(f"{filter_field} does not exist in the provided field list or as a sub-field.")
-
-   
+                print(f"{filter_field} does not exist in the provided field list or as a sub-field.")   
     return filter_should          
         
 def create_alias(selected_index,filter_body, workspace_name,request):
@@ -376,7 +411,7 @@ def create_alias(selected_index,filter_body, workspace_name,request):
             ]
         }
 
-        response = requests.post('http://192.168.6.175:9200/_aliases', json=body)
+        response = requests.post(settings.ES_HOST+'/_aliases', json=body)
         if response.status_code == 200:
             print(f"Alias {alias_name} created successfully with filter list!")
             request.session['alias_name'] = alias_name  # Store in session
@@ -423,11 +458,9 @@ def create_alices(request):
     create_alias(index_name, filter_body, workspace_name,request) 
     return redirect("data_view")
 
-
 def get_date_fields_for_alias(request, specific_alias):
-    es_host = 'http://192.168.6.175:9200'
     work_type = request.session.get('work_type', None)
-    es = Elasticsearch([es_host])
+    es = Elasticsearch([settings.ES_HOST])
 
     try:
         response = es.indices.get_alias()
@@ -441,7 +474,7 @@ def get_date_fields_for_alias(request, specific_alias):
                 fields = field_response[index]['mappings']['properties']
                 
                 if work_type == 'datastream':
-                    ds_response = requests.get(f'http://192.168.6.175:9200/_data_stream/{index}', timeout=10)
+                    ds_response = requests.get(f'settings.ES_HOST/_data_stream/{index}', timeout=10)
                     ds_response.raise_for_status()
                     data_stream_info = ds_response.json()
                     backing_indices = data_stream_info['data_streams'][0].get('indices', [])
@@ -455,7 +488,7 @@ def get_date_fields_for_alias(request, specific_alias):
         else:
             print(f"Alias '{specific_alias}' not found.")
             return None
-    except (RequestException) as e:
+    except (ElasticsearchException, RequestException) as e:
         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
         return None
 
@@ -463,10 +496,7 @@ def get_date_fields_for_alias(request, specific_alias):
     except Exception as e:
         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
         return None
-  
-
-es = Elasticsearch([{'host': '192.168.6.175', 'port': 9200, 'scheme': 'http'}])
-
+# es = Elasticsearch([{'host': '192.168.6.175', 'port': 9200, 'scheme': 'http'}])
 def fetch_from_elasticsearch(request):
     alias_name = request.session.get('alias_name', None)
     print(f"Fetching data from Elasticsearch for alias: {alias_name}")
@@ -477,16 +507,14 @@ def fetch_from_elasticsearch(request):
         "size": 10000
     }
     try:
-        response = es.search(index=alias_name, body=query)
+        response = settings.ES.search(index=alias_name, body=query)
         result = [hit['_source'] for hit in response['hits']['hits']]
         return JsonResponse(result, safe=False)
     except ElasticsearchException as e:
         error_message = {"error": str(e)}
         return JsonResponse(error_message, status=500)
 
-
-
-def create_data_view_(data_view_index_pattern, time_field_name, data_view_name, auth=None, allow_no_index=False):
+def create_data_view_(data_view_index_pattern, time_field_name, data_view_name,request):
     """
     Create a new data view in Kibana.
     """
@@ -495,13 +523,15 @@ def create_data_view_(data_view_index_pattern, time_field_name, data_view_name, 
             'name': data_view_name,
             "title": data_view_index_pattern,
             "timeFieldName": time_field_name,
-            "allowNoIndex": allow_no_index,
+            "allowNoIndex": False,
         }
     }
-    endpoint = f"{kibana_host}/api/data_views/data_view"
+    endpoint = f"{settings.KIBANA_HOST}/api/data_views/data_view"
     try:
         response = requests.post(endpoint, headers=headers, data=json.dumps(data_view_payload), auth=auth, timeout=10)
         response.raise_for_status()
+        data_view = response.json().get('data_view', [])
+        request.session['data_view_id'] = data_view.get('id')
         print("Data view created successfully.")
         return response.json()
     except RequestException as e:
@@ -512,13 +542,13 @@ def get_data_views(auth=None):
     """
     Get all data views from Kibana.
 
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+    :param settings.KIBANA_HOST: The base URL for the Kibana instance (e.g., "http://localhost:5601").
     :param auth: Optional tuple (username, password) for Basic Authentication.
     :return: List of data views or None if the request fails.
     """
     
     # Construct the API endpoint for getting data views
-    endpoint = f"{kibana_host}/api/data_views"
+    endpoint = f"{settings.KIBANA_HOST}/api/data_views"
 
     # Make the GET request to retrieve all data views
     response = requests.get(endpoint, headers=headers)
@@ -541,44 +571,8 @@ def get_data_views(auth=None):
     else:
         print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
         return None
-import requests
 
-def get_data_view_id_by_name(data_view_name, auth=None):
-    """
-    Get the ID of a specific data view from Kibana by its name.
 
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
-    :param data_view_name: The name of the data view to look for.
-    :param auth: Optional tuple (username, password) for Basic Authentication.
-    :return: The ID of the data view or None if not found or request fails.
-    """
-    
-    # Construct the API endpoint for getting data views
-    endpoint = f"{kibana_host}/api/data_views"
-
-    # Set up headers, including authorization if provided
-    headers = {
-        "kbn-xsrf": "true",  # Kibana requires this header for all API requests
-    }
-    
-    if auth:
-        response = requests.get(endpoint, headers=headers, auth=auth)
-    else:
-        response = requests.get(endpoint, headers=headers)
-
-    if response.status_code == 200:
-        data_views = response.json().get('data_view', [])
-        
-        for data_view in data_views:
-            if data_view.get('name') == data_view_name:
-                # Return the ID of the matched data view
-                return data_view.get('id')
-        
-        print(f"Data view with name '{data_view_name}' not found.")
-        return None
-    else:
-        print(f"Failed to retrieve data views: {response.status_code} - {response.text}")
-        return None
 
 def data_view(request):
     
@@ -592,39 +586,17 @@ def data_view(request):
     }
     return render(request, 'data_view.html', context)
 
-
 def create_data_view(request):
     alias_name = request.session.get('alias_name', None)  # Retrieve from session
     workspace_name = request.session.get('workspace_name', None)  # Retrieve from session
     request.session['data_view_name'] = workspace_name  # Store in session
    
     time_field_name = request.POST.get('time-field-name')
-    create_data_view_(data_view_index_pattern=alias_name,time_field_name=time_field_name,data_view_name=workspace_name)
+    create_data_view_(alias_name,time_field_name,workspace_name,request)
     return redirect("dashborad")
-    import requests
-from requests.exceptions import RequestException
-
-
-
-def get_dashboard_id_by_name(dashboard_name):
-    endpoint = f"{kibana_host}/api/saved_objects/_find?type=dashboard"
-    try:
-        response = requests.get(endpoint, headers=headers, timeout=10)
-        response.raise_for_status()
-        dashboards = response.json().get('saved_objects', [])
-        for dashboard in dashboards:
-            if dashboard.get('attributes', {}).get('title') == dashboard_name:
-                print(f"Dashboard '{dashboard_name}' found with ID: {dashboard.get('id')}")
-                return dashboard.get('id')
-        print(f"Dashboard '{dashboard_name}' not found.")
-        return None
-    except RequestException as e:
-        print(f"Failed to retrieve dashboards: {e}")
-        return None
-
 
 def get_all_dashboards():
-    endpoint = f"{kibana_host}/api/saved_objects/_find?type=dashboard"
+    endpoint = f"{settings.KIBANA_HOST}/api/saved_objects/_find?type=dashboard"
     try:
         response = requests.get(endpoint, headers=headers, timeout=10)
         response.raise_for_status()
@@ -639,30 +611,13 @@ def get_all_dashboards():
         print(f"Failed to retrieve dashboards: {e}")
         return None
 
-def get_data_view_id_by_name(data_view_name, auth=None):
-    endpoint = f"{kibana_host}/api/data_views"
-    headers = {"kbn-xsrf": "true"}
 
-    try:
-        response = requests.get(endpoint, headers=headers, auth=auth, timeout=10)
-        response.raise_for_status()
-        data_views = response.json().get('data_view', [])
-
-        for data_view in data_views:
-            if data_view.get('name') == data_view_name:
-                return data_view.get('id')
-
-        print(f"Data view with name '{data_view_name}' not found.")
-        return None
-    except RequestException as e:
-        print(f"Failed to retrieve data views: {e}")
-        return None
 
 def get_dashboard_template_attributes(template_dashboard_id):
     """
     Get the attributes of a template dashboard from Kibana.
 
-    :param kibana_host: The base URL for the Kibana instance (e.g., "http://localhost:5601").
+    :param settings.KIBANA_HOST: The base URL for the Kibana instance (e.g., "http://localhost:5601").
     :param template_dashboard_id: The ID of the template dashboard to copy.
     :param auth: Optional tuple (username, password) for Basic Authentication.
     :return: Dashboard attributes or None if the request fails.
@@ -674,7 +629,7 @@ def get_dashboard_template_attributes(template_dashboard_id):
     }
 
     # Construct the API endpoint for getting the template dashboard
-    endpoint = f"{kibana_host}/api/saved_objects/dashboard/{template_dashboard_id}"
+    endpoint = f"{settings.KIBANA_HOST}/api/saved_objects/dashboard/{template_dashboard_id}"
 
     # Make the GET request to retrieve the template dashboard
     response = requests.get(endpoint, headers=headers, auth=auth)
@@ -685,10 +640,7 @@ def get_dashboard_template_attributes(template_dashboard_id):
         print(f"Failed to retrieve template dashboard: {response.status_code} - {response.text}")
         return None
     
-def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id):
-    print(original_dashboard_id)
-    print(new_title)
-    print(new_data_view_id)
+def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id,request):
     """_summary_  
     # Function to copy an existing dashboard and assign a new data view
 
@@ -703,14 +655,10 @@ def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id):
     """
     # Fetch the original dashboard
     new_id = uuid.uuid4()
-
-    url = f"{kibana_host}/api/saved_objects/dashboard/{original_dashboard_id}"
-
-    
+    url = f"{settings.KIBANA_HOST}/api/saved_objects/dashboard/{original_dashboard_id}"
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     original_dashboard = response.json()
-
     new_dashboard = copy.deepcopy(original_dashboard)
     
 
@@ -726,16 +674,18 @@ def create_new_dashboard(original_dashboard_id , new_title , new_data_view_id):
     # new_dashboard = json.loads(json.dumps(new_dashboard).replace(id_value,new_data_view_id))
     
     payload={"attributes": new_dashboard["attributes"],"references":new_dashboard["references"]}    
-    response = requests.post(f"{kibana_host}/api/saved_objects/dashboard/{new_id}", headers=headers,data=json.dumps(payload))
+    response = requests.post(f"{settings.KIBANA_HOST}/api/saved_objects/dashboard/{new_id}", headers=headers,data=json.dumps(payload))
 
     
     # Check the result of the POST request
     if response.status_code == 200:
         # Parse the response to extract the new dashboard's ID
         new_dashboard_id = response.json()['id']
+        request.session['dashboard_ids'] = new_dashboard_id
         print(f"New dashboard created successfully with ID: {new_dashboard_id}")
     else:
         print(f"Failed to create the new dashboard: {response.text}")
+
 def dashborad(request):
     dashboards = get_all_dashboards()
     print(dashboards)
@@ -745,21 +695,18 @@ def dashborad(request):
 
 def create_dashborad(request):
     
-    alias_names = request.session.get('data_view_name', None)
-    data_view_id = get_data_view_id_by_name(alias_names)
+    data_view_id = request.session.get('data_view_id', None)
     workspace_name = request.session.get('workspace_name', None)
     if request.method == 'POST':
-        dashboard_id = "e0825920-21c5-41ea-a451-e1521233f90f"
-        request.session['dashboard_ids'] = dashboard_id
+        dashboard_id = "659f2ea1-4599-4cd9-9044-d6fcf2adb617"
         time.sleep(1)
-        create_new_dashboard(dashboard_id,workspace_name,data_view_id)
+        create_new_dashboard(dashboard_id,workspace_name,data_view_id,request)
     return redirect("generate_embed_link")
+
 def generate_embed_link(request):
-    fetch_from_elasticsearch(request)
-    workspace_name = request.session.get('workspace_name', None)
-    print(workspace_name)
-    dashboardId = "ca157a96-69f9-4505-be92-9255f1e66d3d"
-    print ("Generating embed link")
+    
+    dashboardId = request.session.get('dashboard_ids', None)
+    
     
     """
     Generate an HTML iframe embed link for a specified Kibana dashboard.
@@ -777,7 +724,7 @@ def generate_embed_link(request):
         The unique identifier of the Kibana dashboard to embed.
 
     base_url : str, optional
-        The base URL of the Kibana server. Defaults to the value of `kibana_host`.
+        The base URL of the Kibana server. Defaults to the value of `settings.KIBANA_HOST`.
 
     Returns:
     -------
@@ -786,23 +733,10 @@ def generate_embed_link(request):
         with the generated iframe embed link as context.
     """
     embed_params = "?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3Anow-15m%2Cto%3Anow))&show-query-input=true&show-time-filter=true&hide-filter-bar=true"
-    embed_link = f"<iframe src='{kibana_host}/app/dashboards#/view/{dashboardId}{embed_params}' height='600' width='950'></iframe>"
+    embed_link = f"<iframe src='{settings.KIBANA_HOST}/app/dashboards#/view/659f2ea1-4599-4cd9-9044-d6fcf2adb617{embed_params}' height='700' width='1600'></iframe>"
 
-    return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.17.101:8000/manage/fetch_data/"})
-
-
-                                  #  DATA STREAM LIST OF FUNCTIONS
-
-
-
-# DATA STREAM LIST OF FUNCTION
-
-# <iframe src="http://192.168.6.175:5601/app/dashboards#/view/e0825920-21c5-41ea-a451-e1521233f90f?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3A'2023-01-14T04%3A40%3A59.269Z'%2Cto%3A'2023-01-14T04%3A41%3A21.251Z'))&show-query-input=true&show-time-filter=true" height="600" width="800"></iframe>
-
-
-   
-
-
+    return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.17.131:8000i[ip/manage/fetch_data/"})
+  
 def display_data_stream_mapping(request,selectedDatabase):
     print("display_data_stream_mapping")
     """
@@ -811,7 +745,7 @@ def display_data_stream_mapping(request,selectedDatabase):
     Parameters:
     - data_stream_name: The name of the selected data stream.
     """
-    response = requests.get(f'http://192.168.6.12:9200/_data_stream/{selectedDatabase}')
+    response = requests.get(f'settings.ES_HOST/_data_stream/{selectedDatabase}')
     if response.status_code == 200:
         data_stream_info = response.json()
         backing_indices = data_stream_info['data_streams'][0].get('indices', [])
@@ -819,12 +753,10 @@ def display_data_stream_mapping(request,selectedDatabase):
         if backing_indices:
             # Get the latest (most recent) backing index
             latest_index_name = backing_indices[-1]['index_name']
-            print(latest_index_name)
+            
             # Retrieve and display the mapping for the latest backing index
-            mapping_response = requests.get(f'http://192.168.6.12:9200/{selectedDatabase}/_mapping')
-            datastream_mapping = mapping_response.json()
-            import pprint
-            pprint.pprint(datastream_mapping)
+            mapping_response = requests.get(f'settings.ES_HOST/{latest_index_name}/_mapping')
+            
             if mapping_response.status_code == 200:
                 mapping = mapping_response.json()
                 properties = mapping[latest_index_name]['mappings']['properties']
@@ -863,57 +795,92 @@ def display_data_stream_mapping(request,selectedDatabase):
     else:
         print(f"Failed to retrieve data stream details for '{selectedDatabase}'. HTTP Status Code: {response.status_code}")
 
+def get_all_indices() -> list[str]:
+    """
+    Get all indices in the Elasticsearch cluster.
 
+    Returns:
+        A list of index names if successful, None otherwise.
+    """
 
-# For data enrichiment
-def police_page(request):
-    list_indices = list_user_indices()
+    # Try to fetch the information about all indices
+    # try:
+    indices = settings.ES.cat.indices(format='json')
+    non_system_indices = [index['index'] for index in indices if not index['index'].startswith('.')]
+    return non_system_indices
+    # except ElasticsearchException as e:
+    #     # If an exception occurs, print it a  nd return None
+    #     print(f"Error getting all indices: {e}")
+    #     return None
+
+def standard_search(request):
+
+    """
+    Perform a search on the specified Elasticsearch index with the provided term.
+
+    Args:
+        query (str): The term or query string to search for.
+
+    Returns:
+        list[Dict[str, str]]: A list of dictionaries containing the matching documents.
+
+    Raises:
+        ElasticsearchException: If an error occurs during the search process.
+    """
     
-    return render(request,'Enrich_template/Create_police.html',context={
-                'list_indices': list_indices,
-            })
+    # Get the form data
+    quary_term = request.POST.get('s')
 
-def search_page(request):
-    list_indices = list_user_indices()
-    return render(request,'search.html',context={
-                'list_indices': list_indices,
-            })
+    # Validate and normalize the query term
+    if not quary_term or len(quary_term) <= 1:
+        redirect('search')
+    try:
+        quary_term = quary_term.strip().lower()
+        print(quary_term)
+        # Check if the index exists and is valid
+    except Exception as e:
+        print(f"Error: {e}")
+        # return []
+        redirect('search')    
+    try:
+        response_disct = []
+        indexies = get_all_indices()
+
+        for index_name in indexies:
+            response = settings.ES.search(
+                index=index_name,
+                body={
+                    "query": {
+                        "query_string": {
+                        "query": quary_term
+                        }
+                    }
+                }
+            )
+            hits = response['hits']['hits']
+            if len(hits) > 0:  
+                source = [hit["_source"] for hit in hits]                
+                response_disct.append({'index_name':index_name,'result':source})
+        if len(response_disct) > 0:
+            # redirect('search_result')
+            # search_result(request,response_disct)
+            pprint.pprint(response_disct)
+            return render(request, 'result.html',context={'response':response_disct})
+
+        else:
+            redirect('search')
+        # return render(request, 'search.html', context = {'result':page_obj})
+    except Exception as e:
+        print(f"Error: {e}")
+        return render(request, 'search.html')
 
 
 
-def create_police(request):
-    global police_name
-    if request.method == 'POST':
-        police_name = request.POST.get('police_name')
-        index_name = request.POST.get('database_type')
-        match_field = request.POST.get('match_field')
-        columns = request.POST.getlist('columns[]')
-        print(police_name)
-        print(index_name)
-        print(match_field)
-        print(columns)
-        request.session['police_name'] = police_name
-        return redirect("excute_page")
-
-def excute_page(request):
-    police_name = request.session.get('police_name', None)
+def viewdashboard(request):
     
-    context = {
-        'police_name': police_name # Add aliases to context
-    }
-    return render(request, 'Enrich_template/excute_page.html', context)
-def create_excute(request):
+    dashboardId = request.session.get('dashboard_ids', None)
+   
+    embed_params = "?embed=true&_g=(refreshInterval%3A(pause%3A!t%2Cvalue%3A60000)%2Ctime%3A(from%3Anow-15m%2Cto%3Anow))&show-query-input=true&show-time-filter=true&hide-filter-bar=true"
+    embed_link = f"<iframe src='{settings.KIBANA_HOST}/app/dashboards#/view/{dashboardId}{embed_params}' height='700' width='1600'></iframe>"
 
-    police_name = request.session.get('police_name', None)
-    
-    return redirect("ingestion_pipeline_page")
-
-def ingestion_pipeline_page(request):
-    police_name = request.session.get('police_name', None)
-    
-    context = {
-        'police_name': police_name # Add aliases to context
-    }
-    return render(request, 'Enrich_template/ingestion_pipeline.html', context)
-
-
+    return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.17.131:8000i[ip/manage/fetch_data/"})

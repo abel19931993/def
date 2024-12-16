@@ -76,7 +76,7 @@
         document.getElementById('database_type').addEventListener('change', function() {
             const selectedDatabase = this.value;
             const columnsContainer = document.getElementById('columnsContainer');
-        
+            console.log(selectedDatabase)
             columnsContainer.innerHTML = ''; // Clear previous options
             fetch(`select_index/${selectedDatabase}`)
                 .then(response => {

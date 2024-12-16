@@ -7,9 +7,7 @@
             <!-- LOGO -->
             <div class="navbar-brand-box ">
                 <a href="#" class="logo logo-light ">
-                    <span class="logo-sm ">
-                        <img src="{% static 'assets/images/logo-light.png' %}" alt="" height="50">
-                    </span>
+                   
                     <span class="logo-lg">
                         <img src="{% static 'assets/images/logo-light.png' %}" alt="" height="50">
                     </span>
@@ -55,24 +53,19 @@
             </div>
 
           
-            
-            <div class="dropdown d-inline-block">
-                <button type="button" class="btn header-item waves-effect" id="page-header-user-dropdown"
+            <button type="button" class="btn header-item waves-effect" id="page-header-user-dropdown"
                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <img class="rounded-circle header-profile-user" src={{request.user.profile_image.url}}
                         alt="Header Avatar">
                     <span class="d-none d-xl-inline-block ms-1" key="t-henry"><h4>Hello, {{request.user}}</h4></span>
                     <!-- <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i> -->
                 </button>
-                
-            </div>
-            <div class="dropdown d-inline-block">
-                <button type="button" class="btn header-item waves-effect" >
-                   
-                    <span class="d-none d-xl-inline-block ms-1" key="t-henry"><h4><a href="{% url 'logoutUser' %}">logout</a></h4></span>
-                    <!-- <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i> -->
+                <button type="button" class="btn header-item waves-effect">
+                    <a href="{% url 'logout_view' %}" class="btn btn-dark d-none d-xl-inline-block" style="font-weight: bold; font-size: 1.25em;">Logout</a>
+
                 </button>
-            </div>
+         
+           
         </div>
     </div>
 </header>

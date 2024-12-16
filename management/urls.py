@@ -3,25 +3,26 @@ from django.urls import path, include
 from .views import *
 
 from django.urls import path,re_path
-from rest_framework_simplejwt import views as jwt_views
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 
 urlpatterns = [
-       # url for data enrichment process
-
-
-    path('register/',registerPage, name='registerPage'),
-    path('login/',loginPage, name='loginPage'),
-    path('logout/',logoutUser, name='logoutUser'),
-
-
-    path('police_page/',police_page, name='police_page'),
-    path('search_page/',search_page, name='search_page'),
-    path('create_police/',create_police, name='create_police'),
-    path('create_excute/',create_excute, name='create_excute'),
-    path('excute_page/',excute_page, name='excute_page'),
-    path('ingestion_pipeline_page/',ingestion_pipeline_page, name ='ingestion_pipeline_page'),
-    
+    path('api/auth/register',RegisterView.as_view(),name="auth_register"),
+    # path('api/auth/login',LoginView.as_view(),name="auth_login"),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/workspace/',WorkspaceListCreateView.as_view(),name='workspace_list_create'),
+    path('list_user_workspaces/',list_user_workspaces,name='list_user_workspaces'),
+    path('list_user_workspacesss/<int:workspace_id>/', list_user_workspacesss, name='list_user_workspacesss'),
+    path('viewdashboard/', viewdashboard, name='viewdashboard'),
+    # path('manage_workspace_page', manage_workspace_page, name='manage_workspace_page'),
+    path('login', login_view, name='login'),
+    path('loginPage', loginPage, name='loginPage'),
+    path('logout_view', logout_view, name='logout_view'),
+    # path('register_func', register_func, name='registerPage'),
     path('create_alices',create_alices, name='create_alices'),
     path("create_data_view",create_data_view, name='create_data_view'),
     path('data_view',data_view, name='data_view'),
@@ -30,13 +31,11 @@ urlpatterns = [
     path("index_view",index_view, name='index_view'),
     path("create_workspace",create_workspace, name='create_workspace'),
     path('fetch_data/', fetch_from_elasticsearch, name='fetch_data'),
-    path('select_index/<slug:user_indices>/', select_index, name='select_index'),
+    path('select_index/<slug:user_indices>/',select_index, name="select_index"),
     path('display_data_stream_mapping/<slug:selectedDatabase>/',display_data_stream_mapping, name="display_data_stream_mapping"),
-    # path('data_ingestion_page/',data_ingestion_page, name='data_ingestion_page'),
     path("generate_embed_link",generate_embed_link, name='generate_embed_link'),
-
-
- 
+    path("search", standard_search, name="search"),
+    # path("search_result",search_result,name="search_result")
        
     
 ]
