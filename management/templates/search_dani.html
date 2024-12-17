@@ -34,6 +34,8 @@
       letter-spacing: 0.1em;
       text-transform: uppercase;
       text-align: center;
+      font-size: 16px; /* Standardize font size */
+      
     }
     p {
       color: var(--blue-black);
@@ -41,7 +43,7 @@
 
     /* Hexagonal Ripple Animation Styles */
     .hexagon {
-      margin-bottom: 20em;
+      margin-bottom: 10px;
       overflow: hidden;
       position: absolute;
       width: 100%; /* Increased size */
@@ -189,7 +191,7 @@
     #s {
       background: var(--white);
       text-indent: 1em;
-      display: inline-block;
+      
       border: 2px solid var(--blue-black);
       width: 0;
       height: 3em;
@@ -203,6 +205,9 @@
       font-family: inherit;
       position: relative;
       z-index: 2;
+      margin-top:150px;
+       /* Adds margin and centers it horizontally */
+      display: block;
     }
 
     #s:focus, #s:hover {
@@ -227,8 +232,14 @@
       color: var(--fg);
     }
       /* Button Styles */
+    
     .buttons {
-      margin-top: 20px;
+        margin-top: 10px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+      
+      
       color: var(--blue-black);
 
     }
@@ -250,9 +261,9 @@
      }
 
     .hexagon {
-      margin-bottom: 20em;
+      margin-bottom: 25em;
       overflow: hidden;
-      position: relative;
+      position: absolute;
       width: 100%; /* Increased size */
       height: 100%; /* Increased size */
       color: var(--blue-black);
@@ -266,12 +277,22 @@
 
     /* Search Form Container */
     #searchform {
-       display: flex;
+      display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
+      position: relative;
+      z-index: 10;
+      margin-top: 10px;
     }
+    
+    .hexagon {
+      position: absolute;
+      z-index: -1; /* Moves it behind other elements */
+      pointer-events: none; /* Ensures it doesn't block clicks */
+    }
+    
 
     @media (prefers-color-scheme: dark) {
       :root {
@@ -279,6 +300,14 @@
         --fg: #e3e4e8;
       }
     }
+    .tagline {
+      margin-top: 20px;
+      font-size: 1em;
+      letter-spacing: 1px;
+      font-weight: bold;
+      color: var(--blue-black);
+    }
+    
   </style>
 </head>
 
@@ -334,17 +363,18 @@
     </div>
   </div>
   {{ page_obj }}
-  <form id="searchform" method="post" enctype="multipart/form-data" action="">
-    {% csrf_token %}
-    <input id="s" type="search" name="s" placeholder="Search..." autocomplete="off">
-    <p><br><br><br><br><br>Sailing confidently through the boundless ocean of data</p>
-     <!-- Buttons for Search and Home -->
-      <div></div>
-     <div class="buttons">
-      <button type="submit" id ="searchbtn">Search</button>
-      <button type="button" onclick="window.location." href="{% url 'welcome__dani' %}">Home</button>
-    </div>
-  </form>
+ 
+<form id="searchform" method="post" enctype="multipart/form-data" action="{% url 'search' %}">
+  {% csrf_token %}
+  <input id="s" type="search" name="search" placeholder="Search..." autocomplete="off">
+  <p class="tagline">SAILING CONFIDENTLY THROUGH THE BOUNDLESS OCEAN OF DATA</p>
+
+  <!-- Buttons for Search and Home -->
+  <div class="buttons">
+    <button type="submit" id="searchbtn">Search</button>
+    <button type="button" onclick="window.location.href='{% url 'welcome__dani' %}'">Home</button>
+  </div>
+</form>
 
   <script>
     // Prevent form submission on pressing Enter key

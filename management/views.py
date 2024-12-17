@@ -828,51 +828,52 @@ def standard_search(request):
         ElasticsearchException: If an error occurs during the search process.
     """
     
-    # Get the form data
-    quary_term = request.POST.get('s')
+    quary_term = request.POST.get('search')
 
     # Validate and normalize the query term
-    if not quary_term or len(quary_term) <= 1:
-        redirect('search')
+    if not quary_term or len(quary_term.strip()) <= 1:
+        return redirect('search')
+
     try:
         quary_term = quary_term.strip().lower()
-        print(quary_term)
-        # Check if the index exists and is valid
     except Exception as e:
-        print(f"Error: {e}")
-        # return []
-        redirect('search')    
-    try:
-        response_disct = []
-        indexies = get_all_indices()
+        print(f"Error normalizing query term: {e}")
+        return redirect('search')
 
+    response_disct = []
+    try:
+        indexies = get_all_indices()
+        
         for index_name in indexies:
-            response = settings.ES.search(
-                index=index_name,
-                body={
+            try:
+                response = settings.ES.search(
+                    index=index_name,
+                     body={
                     "query": {
                         "query_string": {
                         "query": quary_term
                         }
                     }
                 }
-            )
-            hits = response['hits']['hits']
-            if len(hits) > 0:  
-                source = [hit["_source"] for hit in hits]                
-                response_disct.append({'index_name':index_name,'result':source})
-        if len(response_disct) > 0:
-            # redirect('search_result')
-            # search_result(request,response_disct)
-            pprint.pprint(response_disct)
-            return render(request, 'result.html',context={'response':response_disct})
+                )
+                hits = response.get('hits', {}).get('hits', [])
+                if hits:
+                    source = [hit["_source"] for hit in hits]
+                    print(source)
+                    response_disct.append({'index_name': index_name, 'result': source})
+            except Exception as e:
+                print(f"Error searching index '{index_name}': {e}")
 
+        if response_disct:
+            print(response_disct)
+            return render(request, 'result.html', context={'response': response_disct})
         else:
-            redirect('search')
-        # return render(request, 'search.html', context = {'result':page_obj})
+            return render(request, 'result.html', context={'response': [], 'message': 'No results found.'})
+
     except Exception as e:
-        print(f"Error: {e}")
-        return render(request, 'search.html')
+        print(f"Error during search operation: {e}")
+        return render(request, 'error.html', {'error': 'An unexpected error occurred. Please try again.'})
+
 
 
 

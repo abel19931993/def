@@ -35,7 +35,6 @@ urlpatterns = [
     path('display_data_stream_mapping/<slug:selectedDatabase>/',display_data_stream_mapping, name="display_data_stream_mapping"),
     path("generate_embed_link",generate_embed_link, name='generate_embed_link'),
     path("search", standard_search, name="search"),
-    # path("search_result",search_result,name="search_result")
 # update_alias--------------------------------
     
     path('update_alias_page',update_alias_page, name='update_alias_page'),
