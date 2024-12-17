@@ -884,3 +884,335 @@ def viewdashboard(request):
     embed_link = f"<iframe src='{settings.KIBANA_HOST}/app/dashboards#/view/{dashboardId}{embed_params}' height='700' width='1600'></iframe>"
 
     return render(request, 'generate_embed_link.html', context={'embed_link': embed_link,'link':"192.168.17.131:8000i[ip/manage/fetch_data/"})
+
+
+
+# update_alise page------------------------------------------------ 
+
+
+ 
+def update_alias_page(request):
+    """
+    Handles the rendering of the alias update page.
+
+    Args:
+        request: HTTP request object.
+
+    Returns:
+        A rendered template for updating aliases with a context containing alias data.
+    """ 
+    aliases = get_aliases()
+  
+    context = {
+        'aliase_data': aliases
+    }
+    return render(request, 'update_alias.html', context)
+
+def get_aliases():
+    """
+    Fetches a list of aliases from the Elasticsearch instance.
+
+    Returns:
+        A list of aliases that do not start with a dot.
+    """
+    try:
+        response = requests.get('http://192.168.6.175:9200/_cat/aliases?v&h=alias&format=json')
+        response.raise_for_status()
+        all_indices = response.json()
+        user_indices = [alias['alias'] for alias in all_indices if not alias['alias'].startswith('.')]
+        return user_indices
+    except requests.RequestException as e:
+        print(f"Error fetching aliases: {e}")
+        return []
+def search_alias_mapping(selected_alias):
+    """
+    Retrieves field names from the mappings of a specified alias.
+
+    Args:
+        selected_alias (str): The name of the alias to search.
+
+    Returns:
+        A list of field names associated with the alias.
+    """
+    try:
+        response = requests.get(f'http://192.168.6.175:9200/{selected_alias}/_mapping')
+        response.raise_for_status()
+        alias_mappings = response.json()
+        field_names = []
+        for index_name, mapping_data in alias_mappings.items():
+            properties = mapping_data.get('mappings', {}).get('properties', {})
+            field_names.extend(properties.keys())
+        return field_names
+    except requests.RequestException as e:
+        print(f"Error fetching alias mapping: {e}")
+        return []
+
+def search_alias(selected_alias):
+    """
+    Fetches details of an alias, including terms associated with fields.
+
+    Args:
+        selected_alias (str): The alias name.
+
+    Returns:
+        A dictionary mapping fields to their associated terms.
+    """
+    try:
+        response = requests.get(f'http://192.168.6.175:9200/_alias/{selected_alias}')
+        response.raise_for_status()
+        alias_mappings = response.json()
+
+        # print(f"Alias Mappings for '{selected_alias}':")
+        # print(json.dumps(alias_mappings, indent=4)) 
+
+
+        field_terms = {}
+        for alias, alias_data in alias_mappings.items():
+
+            aliases_info = alias_data.get('aliases', {}).get(selected_alias, {})
+            filter_conditions = aliases_info.get('filter', {}).get('bool', {}).get('should', [])
+
+            for condition in filter_conditions:
+                if 'terms' in condition:
+                    for field, terms in condition['terms'].items():
+                        if field not in field_terms:
+                            field_terms[field] = set()  
+                        field_terms[field].update(terms)  
+
+        # Convert sets to lists
+        consolidated_terms = {field: list(terms) for field, terms in field_terms.items()}
+
+        # print(f"Consolidated Terms for '{selected_alias}': {json.dumps(consolidated_terms, indent=4)}")
+        return consolidated_terms
+        
+    except requests.RequestException as e:
+        print(f"Error fetching alias details: {e}")
+        return {}
+
+    except KeyError as e:
+        print(f"Error processing alias mappings: {e}")
+        return {}
+
+def select_alias(request, user_alias):
+    """
+    Fetches combined terms and fields for a given alias.
+
+    Args:
+        request: HTTP request object.
+        user_alias (str): The alias name.
+
+    Returns:
+        A JSON response containing fields and associated terms.
+    """
+    terms_fields = search_alias(user_alias)
+
+    field_names = search_alias_mapping(user_alias)
+
+    # Combine terms and field names
+    combined_result = []
+    for field, terms in terms_fields.items():
+        if field in field_names:
+
+            combined_result.append({"field": field, "terms": terms})
+
+    for field in field_names:
+        if field not in terms_fields:
+            combined_result.append({"field": field, "terms": []})
+    
+    return JsonResponse({'columns': combined_result})
+
+
+es_host = "http://192.168.6.175:9200" # Adjust host/port if necessary
+
+
+# Function to generate filter body
+def create_filter_body(filter_list, fields):
+    """
+    Generates a terms query for Elasticsearch based on filter_list and fields.
+
+    Parameters:
+    - filter_list: Dictionary with fields as keys and their values as lists.
+    - fields: List of field names.
+
+    Returns:
+    - List of terms queries for Elasticsearch.
+    """
+    filter_should = []
+
+    for field in fields:
+        if field in filter_list:
+            values = filter_list[field]
+            for term in values:
+                if term and term.strip():
+                    filter_should.append({"terms": {field: [term.strip()]}})
+        else:
+            print(f"Field '{field}' not found in filter list.")
+
+    print(f"Generated filter body: {filter_should}")
+    return filter_should
+
+# Function to fetch index name from alias
+def get_index_name(selected_alias):
+    """
+    Retrieves the index name associated with a given alias.
+
+    Args:
+        selected_alias (str): The alias name.
+
+    Returns:
+        The index name associated with the alias or None if not found.
+    """
+    
+    try:
+        response = requests.get(f'http://192.168.6.175:9200/_alias/{selected_alias}')
+        response.raise_for_status()
+        alias_mappings = response.json()
+       
+        root_name = next(iter(alias_mappings.keys()), None)  # Get the first key (index name)
+        print(f"Index name for alias '{selected_alias}': {root_name}")
+        return root_name
+    except Exception as e:
+        print(f"Error fetching index name for alias '{selected_alias}': {e}")
+        return None
+
+# Function to update an alias
+def update_alias(filter_body, alias_name):
+    """
+    Updates an alias with the specified filter.
+
+    Args:
+        filter_body (list): Filter body to apply to the alias.
+        alias_name (str): The alias name to update.
+    """
+  
+    selected_index = get_index_name(alias_name)
+    if not selected_index:
+        print(f"No index found for alias '{alias_name}'.")
+        return
+
+    if filter_body:
+        body = {
+            "actions": [
+                {
+                    "add": {
+                        "index": selected_index,
+                        "alias": alias_name,
+                        "filter": {"bool": {"should": filter_body}}
+                    }
+                }
+            ]
+        }
+
+        response = requests.post('http://192.168.6.175:9200/_aliases', json=body)
+        if response.status_code == 200:
+            print(f"Alias '{alias_name}' updated successfully.")
+        else:
+            print(f"Failed to update alias '{alias_name}'. HTTP Code: {response.status_code}")
+    else:
+        print("Filter body is empty. Alias update aborted.")
+
+# Wrapper to handle alias update requests
+def combine_terms_and_fields(selected_alias):
+    """
+    Combines terms and fields from alias mappings.
+
+    Args:
+        selected_alias: The alias to query.
+
+    Returns:
+        A list of dictionaries with fields and their associated terms.
+    """
+
+    terms_fields = search_alias(selected_alias)
+
+    field_names = search_alias_mapping(selected_alias)
+
+    # Combine terms and field names
+    combined_result = []
+    for field, terms in terms_fields.items():
+        if field in field_names:
+
+            combined_result.append({"field": field, "terms": terms})
+
+    for field in field_names:
+        if field not in terms_fields:
+            combined_result.append({"field": field, "terms": []})
+
+    return combined_result
+
+def update_alias__(request):
+    """
+    Handles POST requests to update an alias based on user input.
+
+    Args:
+        request: HTTP request object containing POST data.
+
+    Returns:
+        A redirect to the alias update page or a JSON response in case of an error.
+    """
+    if request.method == "POST":
+        try:
+            # Get the selected alias from POST data
+            alias = request.POST.get('database_type')
+            
+            # Assuming `combine_terms_and_fields` processes data based on alias
+            combined_data = combine_terms_and_fields(alias)
+            print(request.POST)
+            if combined_data:
+                # Create filter list based on combined data
+                filter_list = {item['field']: item['terms'] for item in combined_data}
+                fields = [item['field'] for item in combined_data]
+
+                # Debug print to check the values of filter_list and fields
+                print("filter_list before calling create_filter_body:")
+                print(filter_list)
+                print("fields before calling create_filter_body:")
+                print(fields)
+
+                # Process the incoming data and update filter_list
+                print(request.POST)
+                for column in request.POST:
+                    value = request.POST.getlist(column)
+                    print("value ab")
+                    print(column)
+                    print(value)
+                    print("value bel")
+                    if column in filter_list:  # Ensure the column exists in filter_list
+                        # Split value by commas and trim whitespace
+                        filter_list[column] = [item.strip() for item in value]
+                        print("filter_list ab")
+                        print(filter_list[column])
+                        print("filter_list be")
+                # Debug print to check the updated filter_list
+                print("Updated filter_list after processing POST data:")
+                print(filter_list)
+
+                # Now call create_filter_body
+                filter_body = create_filter_body(filter_list, fields)
+
+                # Print filter_body for debugging
+                print("filter_body:")
+                print(filter_body)
+
+                # Now update the alias
+                update_alias(filter_body, alias)
+
+            # return JsonResponse({'success': True, 'message': 'Alias updated successfully.'})
+            return redirect('update_alias_page')
+        except Exception as e:
+            print(f"Error: {e}")  # Log the error for debugging
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+def search_alias__(request):
+    """
+    Purpose: 
+    """
+    return render(request, 'search_dani.html')
+def welcome__dani(request):
+    """
+    Purpose: one
+    """
+    return render(request, 'welcome_dani.html',)
+# end def

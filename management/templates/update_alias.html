@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <!-- Row for alias selection and columns -->
+            <form action="{% url 'update_alias__' %}" method="post" enctype="multipart/form-data" id="workspaceForm">
+                {% csrf_token %}
+                <div class="row">
+
+                    <!-- Alias Selection Section -->
+                    <div class="col-md-6">
+                        <h5 class="card-title"></h5>
+                        <div class="mb-3 row">
+                            <label class="col-md-4 col-form-label">Select Alias</label>
+                            <div class="col-md-8">
+                                <select class="form-select" name="database_type" id="database_type">
+                                    {% for alias in aliase_data %}
+                                    <option value="{{ alias }}">{{ alias }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div id="manualEntry" class="row mb-4">
+                            <div id="manualFieldsContainer" class="col-10"></div>
+                        </div>
+                    </div>
+
+                    <!-- Columns Section -->
+                    <div class="col-md-6">
+                        <h5 class="card-title">Columns</h5>
+                        <div id="columnsContainer">
+                            <ul id="columns-list" class="list-unstyled">
+                                <!-- Columns will be dynamically added here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="row mt-4">
+                    <div class="col-6 text-end">
+                        <button type="submit" class="btn btn-primary w-md">Submit</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Styling the tags within the textarea-like appearance */
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-height: 40px;
+    background-color: #fff;
+}
+
+.tag {
+    display: flex;
+    align-items: center;
+    background-color: #f1f1f1;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.tag .remove-btn {
+    margin-left: 8px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+}
+
+.tag .remove-btn:hover {
+    color: #d9534f; /* Red on hover */
+}
+
+.tag-container input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 14px;
+    padding: 4px;
+    min-width: 100px;
+}
+
+.tag-container input::placeholder {
+    color: #aaa;
+}
+</style>
+
+<script>
+    // Event listener for the database selection dropdown
+    /**
+     * Handles database selection change.
+     * 
+     * Fetches columns for the selected database and dynamically populates the UI with checkboxes
+     * and tag input fields. Clears previous data when a new selection is made.
+     */
+    document.getElementById('database_type').addEventListener('change', function () {
+        const selectedDatabase = this.value;
+        const columnsContainer = document.getElementById('columnsContainer');
+        const manualFieldsContainer = document.getElementById('manualFieldsContainer');
+        columnsContainer.innerHTML = '';
+        manualFieldsContainer.innerHTML = '';
+
+        fetch(`select_alias/${selectedDatabase}`)
+            .then(response => response.json())
+            .then(data => {
+                /**
+                 * Populates checkboxes and tag inputs for each column.
+                 * 
+                 * Args:
+                 *   data.columns (Array): Array of column objects with field names and terms.
+                 */
+                if (data.columns && data.columns.length > 0) {
+                    data.columns.forEach(column => {
+                        // Create a checkbox for the column
+                        const div = document.createElement('div');
+                        div.className = 'form-check mb-3';
+
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = column.field;
+                        checkbox.name = 'columns[]';
+                        checkbox.className = 'form-check-input';
+                        checkbox.id = column.field;
+
+                        // Automatically check if terms exist for the column
+                        checkbox.checked = column.terms && column.terms.length > 0;
+
+                        label.textContent = column.field;
+                        label.className = 'form-check-label';
+                        label.prepend(checkbox);
+                        div.appendChild(label);
+
+                        columnsContainer.appendChild(div);
+
+                        // If terms exist, create a tag input interface
+                        if (column.terms && column.terms.length > 0) {
+                            createTagInput(column.field, column.terms, manualFieldsContainer);
+                        }
+
+                        // Event listener for checkbox changes
+                        checkbox.addEventListener('change', function () {
+                            const tagContainer = document.getElementById(`tag-container-${column.field}`);
+                            const deleteButton = document.getElementById(`delete-btn-${column.field}`);
+                            if (checkbox.checked) {
+                                // Add tag input interface if checkbox is checked
+                                if (!tagContainer) {
+                                    createTagInput(column.field, column.terms || [], manualFieldsContainer);
+                                }
+                            } else {
+                                // Remove tag input interface if checkbox is unchecked
+                                if (tagContainer) {
+                                    manualFieldsContainer.removeChild(tagContainer.previousElementSibling); // Label
+                                    manualFieldsContainer.removeChild(tagContainer); // Tag container
+                                    if (deleteButton) {
+                                        manualFieldsContainer.removeChild(deleteButton); // Delete button
+                                    }
+
+                                    // Remove hidden fields associated with the column
+                                    const hiddenFields = document.querySelectorAll(`input[name="${column.field}"]`);
+                                    hiddenFields.forEach(hiddenField => hiddenField.remove());
+                                }
+                            }
+                        });
+                    });
+                }
+            })
+            .catch(error => console.error('Error fetching columns:', error));
+    });
+
+    /**
+     * Creates a tag input interface for a specific column.
+     * 
+     * Args:
+     *   field (string): The column name.
+     *   terms (Array): Array of predefined terms for the column.
+     *   container (HTMLElement): The container to append the tag input interface to.
+     */
+    function createTagInput(field, terms, container) {
+        if (document.getElementById(`tag-container-${field}`)) return;
+
+        const label = document.createElement('label');
+        label.textContent = `${field}:`;
+        label.className = 'form-label';
+
+        const tagContainer = document.createElement('div');
+        tagContainer.className = 'tag-container';
+        tagContainer.id = `tag-container-${field}`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = `Enter terms for ${field}`;
+        input.id = `input-${field}`;
+        input.name = `input-${field}`;
+        input.className = 'col-md-3';
+
+        // Populate existing terms
+        if (terms.length > 0) {
+            terms.forEach(term => createTag(term, tagContainer, field));
+        }
+
+        // Add a new tag on "Enter" key press
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && input.value.trim() !== '') {
+                event.preventDefault();
+                createTag(input.value.trim(), tagContainer, field);
+                input.value = '';
+            }
+        });
+
+        tagContainer.appendChild(input);
+
+        // Create a delete button for all tags
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn btn-danger col-md-3';
+        deleteButton.textContent = 'Delete All';
+        deleteButton.id = `delete-btn-${field}`;
+        deleteButton.addEventListener('click', function () {
+            /**
+             * Deletes all tags for the current column except the last one.
+             */
+            if (confirm(`Are you sure you want to delete all terms for "${field}"?`)) {
+                const allTags = tagContainer.querySelectorAll('.tag');
+                if (allTags.length > 1) {
+                    // Remove all but the last tag
+                    for (let i = 0; i < allTags.length - 1; i++) {
+                        allTags[i].remove();
+                    }
+
+                    // Remove hidden fields except for the last one
+                    const hiddenFields = document.querySelectorAll(`input[name="${field}"]`);
+                    hiddenFields.forEach((hiddenField, index) => {
+                        if (index < hiddenFields.length - 1) {
+                            hiddenField.remove();
+                        }
+                    });
+                } else {
+                    alert("The last term cannot be deleted.");
+                }
+            }
+        });
+
+        container.appendChild(label);
+        container.appendChild(tagContainer);
+        container.appendChild(deleteButton);
+    }
+
+    /**
+     * Creates a new tag and its associated hidden input field.
+     * 
+     * Args:
+     *   text (string): The text of the tag.
+     *   container (HTMLElement): The container to append the tag to.
+     *   field (string): The column name associated with the tag.
+     */
+    function createTag(text, container, field) {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = text;
+
+        // Add a button to remove the tag
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'x';
+        removeBtn.addEventListener('click', function () {
+            const tags = container.querySelectorAll('.tag');
+            if (tags.length > 1) {
+                container.removeChild(tag);
+
+                // Remove the associated hidden field
+                const hiddenField = document.querySelector(`#${field}_terms_${text}`);
+                if (hiddenField) {
+                    hiddenField.remove();
+                }
+            } else {
+                alert("The last term cannot be deleted.");
+            }
+        });
+
+        tag.appendChild(removeBtn);
+        createHiddenField(text, container, field);
+        container.insertBefore(tag, container.querySelector('input'));
+    }
+
+    /**
+     * Creates a hidden input field for a tag.
+     * 
+     * Args:
+     *   text (string): The text of the tag.
+     *   container (HTMLElement): The container to append the hidden field to.
+     *   field (string): The column name associated with the hidden field.
+     */
+    function createHiddenField(text, container, field) {
+        const existingHiddenField = document.querySelector(`#${field}_terms_${text}`);
+        if (existingHiddenField && existingHiddenField.value === 'none') {
+            existingHiddenField.remove();
+        }
+
+        const hiddenField = document.createElement('input');
+        hiddenField.type = 'hidden';
+        hiddenField.name = field;
+        hiddenField.id = `${field}_terms_${text}`;
+        hiddenField.value = text;
+        container.appendChild(hiddenField);
+    }
+</script>
+
+
+{% endblock %}

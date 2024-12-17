@@ -36,6 +36,12 @@ urlpatterns = [
     path("generate_embed_link",generate_embed_link, name='generate_embed_link'),
     path("search", standard_search, name="search"),
     # path("search_result",search_result,name="search_result")
-       
+# update_alias--------------------------------
     
+    path('update_alias_page',update_alias_page, name='update_alias_page'),
+    # path('select_alias/', select_alias, name="select_alias"),
+    path('select_alias/<slug:user_alias>/',select_alias, name="select_alias"),
+    path('update_alias__',update_alias__, name='update_alias__'), 
+    path('search_alias__',search_alias__, name='search_alias__'),
+    path('welcome__dani',welcome__dani, name='welcome__dani'),
 ]

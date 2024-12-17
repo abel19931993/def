@@ -1,7 +1,10 @@
-{% comment %} {% extends 'base.html' %}
-{% load static %}
-{% block content %}
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search</title>
+  <style>
     * {
       border: 0;
       box-sizing: border-box;
@@ -22,18 +25,18 @@
     }
     
     body {
-      background: var(--blue-black);
-      color: var(--fg);
+      background: var(--white);
+      color: var(--white);
       font: bold 1em/1.5 "Comfortaa", sans-serif;
       display: grid;
       place-items: center;
-      align-content: center;
       height: 100vh;
       letter-spacing: 0.1em;
       text-transform: uppercase;
+      text-align: center;
     }
     p {
-      color: var(--gold);
+      color: var(--blue-black);
     }
 
     /* Hexagonal Ripple Animation Styles */
@@ -117,7 +120,7 @@
 
     .hexagon__sector:before, .hexagon__sector:after {
       animation-name: ripple;
-      background-color: var(--white);
+      background-color: var(--blue-black);
       border-radius: 0.1em;
       content: "";
       display: block;
@@ -198,8 +201,7 @@
       color: var(--gold);
       font-size: inherit;
       font-family: inherit;
-      position: absolute;
-      text-align: center;
+      position: relative;
       z-index: 2;
     }
 
@@ -215,7 +217,7 @@
       content: var(--serachicon); 
       font-size: 1.5em;
       color: var(--fg);
-      position: absolute;
+      position: relative;
       left: 0.5em;
       top: 50%;
       transform: translateY(-50%);
@@ -223,6 +225,52 @@
 
     #s:focus::before {
       color: var(--fg);
+    }
+      /* Button Styles */
+    .buttons {
+      margin-top: 20px;
+      color: var(--blue-black);
+
+    }
+  
+    .buttons button {
+      background-color: var(--blue-black);
+      border: none;
+      color: var(--white);
+      padding: 10px 20px;
+       font-size: 1em;
+      border-radius: 30px;
+      cursor: pointer;
+       transition: all 0.3s ease;
+    }
+  
+    .buttons button:hover {
+      background-color: var(--fg);
+      color: var(--gold);
+     }
+
+    .hexagon {
+      margin-bottom: 20em;
+      overflow: hidden;
+      position: relative;
+      width: 100%; /* Increased size */
+      height: 100%; /* Increased size */
+      color: var(--blue-black);
+
+      }
+
+      /* Centering and positioning hexagonal ripples */
+    .hexagon__group, .hexagon__sector, .hexagon__sector:before, .hexagon__sector:after {
+      position: absolute;
+    }
+
+    /* Search Form Container */
+    #searchform {
+       display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -232,80 +280,84 @@
       }
     }
   </style>
-<div class="row">
-    <div class="col-xl-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="hexagon" aria-label="Animated hexagonal ripples">
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                    <div class="hexagon__group">
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                      <div class="hexagon__sector"></div>
-                    </div>
-                  </div>
-                  {{ page_obj }}
-                  <form id="searchform" method="post" enctype="multipart/form-data" action="/manage/search">
-                    {% csrf_token %}
-                    <input id="s" type="search" name="s" placeholder="Search..." autocomplete="off">
-                    <p><br><br><br><br><br>Sailing confidently through the boundless ocean of data</p>
-                  </form>
-                
-            </div>
-        </div>
-    </div>
-</div>
+</head>
 
-<script>
-    // Add event listener for the Enter key to submit the form
+<body>
+  <div class="hexagon" aria-label="Animated hexagonal ripples">
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+    <div class="hexagon__group">
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+      <div class="hexagon__sector"></div>
+    </div>
+  </div>
+  {{ page_obj }}
+  <form id="searchform" method="post" enctype="multipart/form-data" action="">
+    {% csrf_token %}
+    <input id="s" type="search" name="s" placeholder="Search..." autocomplete="off">
+    <p><br><br><br><br><br>Sailing confidently through the boundless ocean of data</p>
+     <!-- Buttons for Search and Home -->
+      <div></div>
+     <div class="buttons">
+      <button type="submit" id ="searchbtn">Search</button>
+      <button type="button" onclick="window.location." href="{% url 'welcome__dani' %}">Home</button>
+    </div>
+  </form>
+
+  <script>
+    // Prevent form submission on pressing Enter key
     document.getElementById('s').addEventListener('keydown', function(event) {
       if (event.key === 'Enter') {
-        event.preventDefault(); // Prevent the default behavior (form submission on Enter)
-        document.getElementById('searchform').submit(); // Manually submit the form
+        event.preventDefault(); // Prevent form submission on Enter
       }
     });
-  </script>
 
-{% endblock %} {% endcomment %}
+    // Submit the form when the "Search" button is clicked
+    document.getElementById('searchbtn').addEventListener('click', function(event) {
+      document.getElementById('searchform').submit(); // Manually submit the form
+    });
+  </script>
+</body>
+</html>
