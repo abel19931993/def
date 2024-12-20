@@ -312,6 +312,9 @@
 </head>
 
 <body>
+ 
+
+
   <div class="hexagon" aria-label="Animated hexagonal ripples">
     <div class="hexagon__group">
       <div class="hexagon__sector"></div>
@@ -363,7 +366,9 @@
     </div>
   </div>
   {{ page_obj }}
- 
+  {% if error_message %}
+  <p style="color: blue;">{{ error_message }}</p>  <!-- Display error message -->
+{% endif %}
 <form id="searchform" method="post" enctype="multipart/form-data" action="{% url 'search' %}">
   {% csrf_token %}
   <input id="s" type="search" name="search" placeholder="Search..." autocomplete="off">
@@ -372,7 +377,7 @@
   <!-- Buttons for Search and Home -->
   <div class="buttons">
     <button type="submit" id="searchbtn">Search</button>
-    <button type="button" onclick="window.location.href='{% url 'welcome__dani' %}'">Home</button>
+    <button type="button" onclick="window.location.href='{% url 'list_user_workspaces' %}'">Home</button>
   </div>
 </form>
 

@@ -74,28 +74,43 @@ from .serializers import UserSerializer
 
 # @api_view(['POST'])
 def login_view(request):
-    username = request.POST.get('username')
-    password = request.POST.get('password')
-    print(username)
-    user = authenticate(username=username, password=password)
-    if user is not None:
+    error_message = ""  # Initialize the error message variable
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        try:
+            # Assert that username and password are provided
+            assert username, "Username is required"
+            assert password, "Password is required"
+
+            # Authenticate user
+            user = authenticate(username=username, password=password)
+
+            # Assert that the user is valid
+            assert user is not None, "Invalid username or password"
+
+            # If no assertion failed, log the user in
             refresh = RefreshToken.for_user(user)
             user_serializer = UserSerializer(user)
             request.session['auth_token'] = str(refresh.access_token)
-            print(str(refresh.access_token))
             login(request, user)
             return redirect('list_user_workspaces')
-            
-    return redirect('loginPage')
+
+        except AssertionError as e:
+            # If an assertion fails, capture the error message
+            error_message = str(e)
+
+    # Pass the error message to the template if there is any
+    return render(request, 'login.html', {'error_message': error_message})
+
 def loginPage(request):
-    tabss = [
-            {"id": "Content"}
-            ]
+    tabss = [{"id": "Content"}]
     context = {
-            'tabs':  tabss
-            # Add more context variables as neededS
-            }
-    return render(request,'login.html',context)
+        'tabs': tabss,
+        'error_message': request.GET.get('error_message', '')  # Add error message to context
+    }
+    return render(request, 'login.html', context)
 
 def logout_view(request):
     logout(request)
@@ -115,7 +130,7 @@ def list_user_workspaces(request):
     data = resource_serializer_responce.data
     print(request.user)
     recent_workspaces = {'recent_workspaces':data}
-    return render(request,'welcome_page.html',context = recent_workspaces)
+    return render(request,'welcome_dani.html',context = recent_workspaces)
 def list_user_workspacesss(request, workspace_id):
     resource = get_object_or_404(Resource, id=workspace_id)
     resource_serializer_responce = ResourceSerializer(resource)
@@ -256,93 +271,107 @@ def index_view(request):
 # Step 3: Select index
 def select_index(request, user_indices):
     try:
+        assert user_indices, "User indices parameter is missing or empty."
+
+        # Define endpoint
         endpoint = f"{settings.ES_HOST}/{user_indices}/_mapping"
-        print(type(endpoint))
-        response = requests.get(endpoint, headers=headers,timeout=10)
-        print(response)
-        if response.status_code == 200:
-            mapping = response.json()
-            index_mapping = mapping.get(user_indices, {})
-            properties = index_mapping.get('mappings', {}).get('properties', {})
+        headers = {"Content-Type": "application/json"}
+        
+        # Send request
+        response = requests.get(endpoint, headers=headers, timeout=10)
+        assert response.status_code == 200, (
+            f"Failed to retrieve mappings for index '{user_indices}'. "
+            f"HTTP Status Code: {response.status_code}."
+        )
 
-            print(f"Fields and Types in Index '{user_indices}':")
-            known_fields = []  
+        # Parse the response JSON
+        mapping = response.json()
+        index_mapping = mapping.get(user_indices, {})
+        properties = index_mapping.get('mappings', {}).get('properties', {})
 
-            def traverse_fields(fields, parent_field=""):
-                for field, attributes in fields.items():
-                    full_field_name = f"{parent_field}.{field}" if parent_field else field
-                    field_type = attributes.get('type', 'object')
+        assert properties, "No properties found in the selected index mapping."
 
-                    if field_type != 'object':
-                        known_fields.append(full_field_name)
+        # Traverse and collect fields
+        known_fields = []
 
-                    if field_type == 'object' and 'properties' in attributes:
-                        traverse_fields(attributes['properties'], full_field_name)
+        def traverse_fields(fields, parent_field=""):
+            for field, attributes in fields.items():
+                full_field_name = f"{parent_field}.{field}" if parent_field else field
+                field_type = attributes.get('type', 'object')
 
-            if properties:
-                traverse_fields(properties)
-              
-                if known_fields:
-                    return JsonResponse({'columns': known_fields})
-                    for field, field_type in known_fields:
-                        print(f"- {field}: {field_type}")
-                else:
-                    print("No fields with known types found in the selected index.")
-            else:
-                print("No fields found in the selected index.")
-        else:
-            print(f"Failed to retrieve mappings for index '{user_indices}'. HTTP Status Code: {response.status_code}")
+                if field_type != 'object':
+                    known_fields.append(full_field_name)
+
+                if field_type == 'object' and 'properties' in attributes:
+                    traverse_fields(attributes['properties'], full_field_name)
+
+        traverse_fields(properties)
+
+        assert known_fields, "No fields with known types found in the selected index."
+
+        # Return the collected fields
+        return JsonResponse({'columns': known_fields})
+    
+    except AssertionError as error_message:
+        # Log or handle assertion error
+        print(f"Assertion Error: {error_message}")
+        return JsonResponse({'error': str(error_message)}, status=400)
     except requests.exceptions.RequestException as e:
+        # Handle network-related errors
         print(f"An error occurred while fetching the mappings: {e}")
+        return JsonResponse({'error': "Error while connecting to Elasticsearch."}, status=500)
+    except Exception as e:
+        # Catch-all for unexpected errors
+        print(f"Unexpected error: {e}")
+        return JsonResponse({'error': "An unexpected error occurred."}, status=500)
 
 def input_filter_values(input_data, is_csv=True):
     filters_map = {}
-    
+
     if is_csv:
-        if input_data:
-            try:
-                with open(input_data, newline='') as csvfile:
-                    reader = csv.reader(csvfile)
-                    headers = next(reader)  # Get the first row as headers
-                    for row in reader:
-                        if row:  # Check if the row is not empty
-                            for i, value in enumerate(row):
-                                field = headers[i] if i < len(headers) else f"field_{i}"
-                                if field in filters_map:
-                                    filters_map[field].append(value)
-                                else:
-                                    filters_map[field] = [value]  # Create a new list for the field
-            except FileNotFoundError:
-                print(f"Error: The file at {input_data} was not found.")
-                return {}
-        else:
-            print("Error: No input data provided for CSV.")
-    else:
-        print("inputttttttttttttttt")
-        print(input_data)
-        for field_name, value in input_data:
-            value_list = [v.strip() for v in value.split(',')] 
-            if field_name in filters_map:
-                filters_map[field_name].append(value_list)
-            else:
-                filters_map[field_name] = value_list
+        assert input_data, "Error: No input data provided for CSV."
         
+        try:
+            with open(input_data, newline='') as csvfile:
+                reader = csv.reader(csvfile)
+                headers = next(reader, None)  # Get the first row as headers
+                assert headers, "Error: The CSV file is empty or missing headers."
+                
+                for row in reader:
+                    if row:  # Check if the row is not empty
+                        for i, value in enumerate(row):
+                            field = headers[i] if i < len(headers) else f"field_{i}"
+                            filters_map.setdefault(field, []).append(value)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Error: The file at {input_data} was not found.")
+        except Exception as e:
+            raise Exception(f"Unexpected error while processing the CSV: {e}")
+    else:
+        assert isinstance(input_data, list), "Error: Input data must be a list of tuples when is_csv is False."
+        for field_name, value in input_data:
+            value_list = [v.strip() for v in value.split(',')]
+            filters_map.setdefault(field_name, []).extend(value_list)
 
     return filters_map
-supported_datebase = ['postgresql','mysql']   
+
+
+# Supported databases
+supported_databases = ['postgresql', 'mysql']
 
 def create_filter_body(filter_list, field):
     """
-    Iterate over filter_list items, then Check if the filter_field is in field and Add terms filters.
+    Iterate over filter_list items, then check if the filter_field is in field and add terms filters.
 
-    Parameter: 
+    Parameters:
     - filter_list: A dictionary mapping fields to their filter values.
     - field: Selected fields.
 
     Returns:
     - filter_should: Create terms query with the matched field and values.
-
     """
+    assert isinstance(filter_list, dict), "filter_list must be a dictionary."
+    assert isinstance(field, list), "field must be a list of available fields."
+
     filter_should = []
     
     for filter_field, values in filter_list.items():
@@ -379,18 +408,24 @@ def create_filter_body(filter_list, field):
                     break
             else:
                 print(f"{filter_field} does not exist in the provided field list or as a sub-field.")   
-    return filter_should          
+    return filter_should
+         
         
-def create_alias(selected_index,filter_body, workspace_name,request):
-    global alias_name
+def create_alias(selected_index, filter_body, workspace_name, request):
     """
-    Create aliases on elastic search
+    Create aliases on Elasticsearch.
 
-    Parameter: 
-    - selected_index: index name
+    Parameters: 
+    - selected_index: Index name
     - filter_body: Created terms query
-    - workspace_name: name of created work space
+    - workspace_name: Name of created workspace
     """
+    # Assertions to validate input
+    assert isinstance(selected_index, str) and selected_index.strip(), "selected_index must be a non-empty string."
+    assert isinstance(filter_body, list), "filter_body must be a list."
+    assert isinstance(workspace_name, str) and workspace_name.strip(), "workspace_name must be a non-empty string."
+    assert request is not None, "request must not be None."
+
     if filter_body:
         current_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         alias_name = f"{workspace_name}_{current_timestamp}"
@@ -411,7 +446,7 @@ def create_alias(selected_index,filter_body, workspace_name,request):
             ]
         }
 
-        response = requests.post(settings.ES_HOST+'/_aliases', json=body)
+        response = requests.post(settings.ES_HOST + '/_aliases', json=body)
         if response.status_code == 200:
             print(f"Alias {alias_name} created successfully with filter list!")
             request.session['alias_name'] = alias_name  # Store in session
@@ -423,101 +458,203 @@ def create_alias(selected_index,filter_body, workspace_name,request):
 filters = {}
 filter_body =[]
 result =[]
+
 def create_alices(request):
+    """
+    Handle the creation of aliases based on user input and CSV data.
     
-    if request.method == 'POST':
-        # Convert items to a list
-        post_items = list(request.POST.items())
-
-        # Exclude the last element and get items after the 4th
-        filtered_items = post_items[4:-1]  # Start from the 5th item and exclude the last
-
-        # Create a list or dictionary with the results
-        result = [(field_name, value) for field_name, value in filtered_items]
-
+    Parameters:
+    - request: The HTTP request object containing POST data and files.
     
+    Returns:
+    - Redirects to the "data_view" page after processing.
+    """
+    # Assert that the request method is POST
+    assert request.method == 'POST', "Invalid request method. POST required."
+
+    # Convert items to a list
+    post_items = list(request.POST.items())
+
+    # Exclude the last element and get items after the 4th
+    filtered_items = post_items[4:-1]  # Start from the 5th item and exclude the last
+
+    # Create a list of tuples with the results
+    result = [(field_name, value) for field_name, value in filtered_items]
+
+    # Retrieve necessary POST data
     workspace_name = request.POST.get('workspace_name')
     columns = request.POST.getlist('columns[]')
-    # manual_fields = request.POST.getlist('manual_fields[]')  # Remove brackets
     index_name = request.POST.get('database_type')
-
     csv_file = request.FILES.get('csv_file') 
-    
+
+    # Assertions to validate input data
+    assert workspace_name and workspace_name.strip(), "Workspace name is required and cannot be empty."
+    assert isinstance(columns, list) and columns, "Columns must be a non-empty list."
+    assert index_name and index_name.strip(), "Database type (index name) is required and cannot be empty."
+
     if csv_file:
+        # Assert that the uploaded file is a CSV
+        assert csv_file.name.endswith('.csv'), "Uploaded file must be a CSV."
+
         fs = FileSystemStorage()
         filename = fs.save(csv_file.name, csv_file)
         csv_file_path = os.path.join(settings.MEDIA_ROOT, filename)
-        filters =input_filter_values(csv_file_path, is_csv=True)
-        filter_body = create_filter_body(filters,columns)
+
+        # Assert that the file was saved successfully
+        assert os.path.exists(csv_file_path), f"CSV file was not saved correctly at {csv_file_path}."
+
+        filters = input_filter_values(csv_file_path, is_csv=True)
+        # Assert that filters were successfully created
+        assert filters, "Failed to create filters from the CSV file."
+        filter_body = create_filter_body(filters, columns)
     else:
-       
+        # Assert that result has the expected structure
+        assert isinstance(result, list), "Result must be a list of tuples."
         filters = input_filter_values(result, is_csv=False)
-        filter_body = create_filter_body(filters,columns)
-   
-    
-    create_alias(index_name, filter_body, workspace_name,request) 
+        # Assert that filters were successfully created
+        assert filters, "Failed to create filters from the provided input."
+        filter_body = create_filter_body(filters, columns)
+
+    # Assert that filter_body is a list
+    assert isinstance(filter_body, list), "Filter body must be a list."
+
+    # Create the alias
+    create_alias(index_name, filter_body, workspace_name, request) 
+
     return redirect("data_view")
 
 def get_date_fields_for_alias(request, specific_alias):
+    """
+    Retrieve date fields for a specific Elasticsearch alias.
+    
+    Parameters:
+    - request: The HTTP request object containing session data.
+    - specific_alias (str): The alias for which date fields are to be retrieved.
+    
+    Returns:
+    - dict or None: A dictionary mapping the alias to its date fields, or None if not found.
+    """
+    # Assert that specific_alias is provided and is a string
+    assert isinstance(specific_alias, str) and specific_alias.strip(), "specific_alias must be a non-empty string."
+
     work_type = request.session.get('work_type', None)
+
+    # Assert that work_type is provided and valid
+    assert work_type in ['datastream', 'other_valid_types'], "Invalid or missing work_type in session."
+
     es = Elasticsearch([settings.ES_HOST])
 
     try:
         response = es.indices.get_alias()
+        assert isinstance(response, dict), "Elasticsearch response for get_alias is not a dictionary."
+
         alias_found = False
         date_fields = {}
-        
+
         for index, data in response.items():
-            if specific_alias in data['aliases']:
+            if specific_alias in data.get('aliases', {}):
                 alias_found = True
                 field_response = es.indices.get_mapping(index=index)
+                assert index in field_response, f"Index '{index}' not found in mapping response."
                 fields = field_response[index]['mappings']['properties']
-                
+
                 if work_type == 'datastream':
-                    ds_response = requests.get(f'settings.ES_HOST/_data_stream/{index}', timeout=10)
+                    ds_endpoint = f"{settings.ES_HOST}/_data_stream/{index}"
+                    ds_response = requests.get(ds_endpoint, timeout=10)
                     ds_response.raise_for_status()
                     data_stream_info = ds_response.json()
                     backing_indices = data_stream_info['data_streams'][0].get('indices', [])
+                    assert backing_indices, "No backing indices found for the data stream."
                     latest_index_name = backing_indices[-1]['index_name']
+                    assert latest_index_name in field_response, (
+                        f"Latest index '{latest_index_name}' not found in mapping response."
+                    )
                     fields = field_response[latest_index_name]['mappings']['properties']
-                
-                date_fields = {field_name: field_info for field_name, field_info in fields.items() if field_info.get('type') == 'date'}
-        
-        if alias_found:
-            return {specific_alias: list(date_fields.keys())}
-        else:
-            print(f"Alias '{specific_alias}' not found.")
-            return None
+
+                # Collect date fields
+                date_fields = {
+                    field_name: field_info
+                    for field_name, field_info in fields.items()
+                    if field_info.get('type') == 'date'
+                }
+
+        assert alias_found, f"Alias '{specific_alias}' not found in any index."
+
+        return {specific_alias: list(date_fields.keys())} if date_fields else {}
+    
     except (ElasticsearchException, RequestException) as e:
         print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
         return None
-
-            
+    except AssertionError as e:
+        print(f"Assertion Error: {e}")
+        return None
     except Exception as e:
-        print(f"Error retrieving date fields for alias '{specific_alias}': {e}")
+        print(f"Unexpected error retrieving date fields for alias '{specific_alias}': {e}")
         return None
 # es = Elasticsearch([{'host': '192.168.6.175', 'port': 9200, 'scheme': 'http'}])
 def fetch_from_elasticsearch(request):
-    alias_name = request.session.get('alias_name', None)
-    print(f"Fetching data from Elasticsearch for alias: {alias_name}")
+    """
+    Fetch data from Elasticsearch for a specific alias.
     
+    Parameters:
+    - request: The HTTP request object containing session data.
+    
+    Returns:
+    - JsonResponse: JSON response with fetched data or an error message.
+    """
+    # Assert that the alias_name exists in the session
+    alias_name = request.session.get('alias_name', None)
+    assert alias_name, "Alias name not found in session. Cannot fetch data."
+
+    print(f"Fetching data from Elasticsearch for alias: {alias_name}")
+
     query = {
         "_source": ["From", "location", "imsi", "To", "duration", "City_name"],
         "query": {"match_all": {}},
         "size": 10000
     }
+
     try:
+        # Assert Elasticsearch settings are configured
+        assert hasattr(settings, 'ES'), "Elasticsearch settings (ES) are not configured."
+
+        # Perform the Elasticsearch query
         response = settings.ES.search(index=alias_name, body=query)
+
+        # Assert that the response contains hits
+        assert 'hits' in response and 'hits' in response['hits'], "Elasticsearch response is missing 'hits'."
+
         result = [hit['_source'] for hit in response['hits']['hits']]
         return JsonResponse(result, safe=False)
     except ElasticsearchException as e:
         error_message = {"error": str(e)}
         return JsonResponse(error_message, status=500)
 
-def create_data_view_(data_view_index_pattern, time_field_name, data_view_name,request):
+def create_data_view_(data_view_index_pattern, time_field_name, data_view_name, request):
     """
     Create a new data view in Kibana.
+    
+    Parameters:
+    - data_view_index_pattern (str): The index pattern for the data view.
+    - time_field_name (str): The field to use for time-based data.
+    - data_view_name (str): The name of the data view.
+    - request: The HTTP request object containing session data.
+    
+    Returns:
+    - dict or None: The created data view information or None if an error occurs.
     """
+    # Assertions to validate inputs
+    assert data_view_index_pattern and isinstance(data_view_index_pattern, str), \
+        "Data view index pattern must be a non-empty string."
+    assert time_field_name and isinstance(time_field_name, str), \
+        "Time field name must be a non-empty string."
+    assert data_view_name and isinstance(data_view_name, str), \
+        "Data view name must be a non-empty string."
+
+    # Assert that Kibana settings are configured
+    assert hasattr(settings, 'KIBANA_HOST'), "Kibana host settings are not configured."
+    assert hasattr(settings, 'auth'), "Authentication settings for Kibana are not configured."
+
     data_view_payload = {
         "data_view": {
             'name': data_view_name,
@@ -526,18 +663,32 @@ def create_data_view_(data_view_index_pattern, time_field_name, data_view_name,r
             "allowNoIndex": False,
         }
     }
+
     endpoint = f"{settings.KIBANA_HOST}/api/data_views/data_view"
+    
     try:
+        # Ensure headers are provided
+        assert 'headers' in globals(), "Headers for the Kibana request are not defined."
+
+        # Perform the POST request
         response = requests.post(endpoint, headers=headers, data=json.dumps(data_view_payload), auth=auth, timeout=10)
+
+        # Assert that the response status is successful
+        assert response.status_code == 200, f"Kibana API returned an unexpected status: {response.status_code}"
+
         response.raise_for_status()
-        data_view = response.json().get('data_view', [])
+        data_view = response.json().get('data_view', {})
+        
+        # Assert the data_view contains the 'id'
+        assert 'id' in data_view, "Created data view does not contain an 'id'."
+
+        # Store the data view ID in the session
         request.session['data_view_id'] = data_view.get('id')
         print("Data view created successfully.")
         return response.json()
     except RequestException as e:
         print(f"Failed to create data view: {e}")
         return None
-
 def get_data_views(auth=None):
     """
     Get all data views from Kibana.
@@ -813,8 +964,8 @@ def get_all_indices() -> list[str]:
     #     print(f"Error getting all indices: {e}")
     #     return None
 
-def standard_search(request):
 
+def standard_search(request):
     """
     Perform a search on the specified Elasticsearch index with the provided term.
 
@@ -828,55 +979,66 @@ def standard_search(request):
         ElasticsearchException: If an error occurs during the search process.
     """
     
-    quary_term = request.POST.get('search')
+    # Initialize variables for error message and response
+    error_message = None
+    response_dict = []
 
-    # Validate and normalize the query term
-    if not quary_term or len(quary_term.strip()) <= 1:
-        return redirect('search')
+    # Get the query term from the request
+    query_term = request.POST.get('search')
 
     try:
-        quary_term = quary_term.strip().lower()
-    except Exception as e:
-        print(f"Error normalizing query term: {e}")
-        return redirect('search')
+        # Validate the query term with assertions
+        assert query_term, "Search term must not be empty"  # Ensure query_term is not empty
+        assert len(query_term.strip()) > 1, "Search term must have more than 1 character"  # Ensure it's long enough
 
-    response_disct = []
-    try:
-        indexies = get_all_indices()
-        
-        for index_name in indexies:
+        # Normalize the query term
+        query_term = query_term.strip().lower()
+
+        # Perform Elasticsearch search
+        indices = get_all_indices()
+        assert indices, "No indices found in Elasticsearch"  # Assert that indices are available
+
+        for index_name in indices:
             try:
+                assert isinstance(index_name, str) and len(index_name) > 0, f"Invalid index name: {index_name}"
+
                 response = settings.ES.search(
                     index=index_name,
-                     body={
-                    "query": {
-                        "query_string": {
-                        "query": quary_term
+                    body={
+                        "query": {
+                            "query_string": {
+                                "query": query_term
+                            }
                         }
                     }
-                }
                 )
                 hits = response.get('hits', {}).get('hits', [])
+                assert isinstance(hits, list), "Hits should be a list"
+
                 if hits:
                     source = [hit["_source"] for hit in hits]
-                    print(source)
-                    response_disct.append({'index_name': index_name, 'result': source})
-            except Exception as e:
-                print(f"Error searching index '{index_name}': {e}")
+                    response_dict.append({'index_name': index_name, 'result': source})
+                else:
+                    response_dict.append({'index_name': index_name, 'message': "No results found in this index."})
 
-        if response_disct:
-            print(response_disct)
-            return render(request, 'result.html', context={'response': response_disct})
-        else:
-            return render(request, 'result.html', context={'response': [], 'message': 'No results found.'})
+            except Exception as e:
+                error_message = f"Error searching index '{index_name}': {e}"
+                response_dict.append({'index_name': index_name, 'error': error_message})
+
+        # If no results are found, set an appropriate message
+        if not response_dict:
+            error_message = "No results found in any of the indices."
+
+    except AssertionError as e:
+        # Catch assertion errors and show them on the same page
+        error_message = str(e)
 
     except Exception as e:
-        print(f"Error during search operation: {e}")
-        return render(request, 'error.html', {'error': 'An unexpected error occurred. Please try again.'})
+        # Catch any other unexpected errors
+        error_message = f"Error during search operation: {e}"
 
-
-
-
+    # Render the search page with either results or error messages
+    return render(request, 'search_dani.html', {'error_message': error_message, 'query_term': query_term, 'response': response_dict})
 def viewdashboard(request):
     
     dashboardId = request.session.get('dashboard_ids', None)
@@ -1213,7 +1375,30 @@ def search_alias__(request):
     return render(request, 'search_dani.html')
 def welcome__dani(request):
     """
-    Purpose: one
+    Purpose: Handle rendering of the welcome page with error handling for network issues.
     """
-    return render(request, 'welcome_dani.html',)
+    try:
+        # Example: Fetch recent workspaces or other data (you might have a database or API call)
+        # Simulate a potential request to fetch recent workspaces or something from a server.
+        response = requests.get('http://example.com/api/recent-workspaces')  # Example API URL
+        response.raise_for_status()  # Raise an exception for bad responses
+        recent_workspaces = response.json()  # Assuming JSON response with workspace data
+
+        return render(request, 'welcome_dani.html', {'recent_workspaces': recent_workspaces})
+    
+    except requests.ConnectionError:
+        # Handle no internet connection or unable to reach the server
+        return render(request, 'welcome_dani.html', {'error_message': "It seems like there's no internet connection. Please check your connection and try again."})
+
+    except requests.Timeout:
+        # Handle server timeout errors
+        return render(request, 'welcome_dani.html', {'error_message': "The server took too long to respond. Please try again later."})
+    
+    except requests.RequestException as e:
+        # Handle any other HTTP error (server down, invalid response, etc.)
+        return render(request, 'welcome_dani.html', {'error_message': "We're experiencing some issues with the server. Please try again later."})
+
+    except Exception as e:
+        # Catch any other unexpected errors
+        return render(request, 'welcome_dani.html', {'error_message': f"An unexpected error occurred: {str(e)}"})
 # end def

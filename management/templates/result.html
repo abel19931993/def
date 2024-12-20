@@ -5,73 +5,90 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <style>
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                    }
-                    th, td {
-                        padding: 8px;
-                        text-align: left;
-                        border: 1px solid #ddd;
-                    }
-                    th {
-                        background-color: #f2f2f2;
-                    }
-                </style>
+                {% if error_message %}
+                <p style="color: red;">{{ error_message }}</p>  <!-- Display error message -->
+              {% endif %}
+              
+              {% if results %}
 
-                <h4 class="card-title">Your search result</h4>
-                <div class="table-rep-plugin">
-                    <div class="table-responsive mb-0" data-pattern="priority-columns">
-                        <table id="tech-companies-1" class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th data-priority="1">Symbol</th>
-                            <th data-priority="1">Last Trade</th>
-                            <th data-priority="3">Trade Time</th>
-                            <th data-priority="1">Change</th>
-                            <th data-priority="3">Prev Close</th>
-                            <th data-priority="3">Open</th>
-                            <th data-priority="6">Bid</th>
-                            <th data-priority="6">Ask</th>
-                            <th data-priority="6">1y Target Est</th>
-                            <th data-priority="3">Open</th>
-                            <th data-priority="6">Bid</th>
-                            <th data-priority="6">Ask</th>
-                           
-                            {% comment %} {% if response and response.0.result %}
-                                {% for key in response.0.result.0.Communication.Cellular.keys %}
-                                    <th>{{ key }}</th>
-                                {% endfor %}
-                            {% else %}
-                                <th colspan="4">No data available</th>
-                            {% endif %} {% endcomment %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for db in response %}
-                            {% if db.result %}
-                                {% for item in db.result %}
-                                    <tr>
-                                        {% for value in item.Communication.Cellular.values %}
-                                            <td>{{ value }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr><td colspan="4">No data available</td></tr>
-                            {% endif %}
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <h4 class="card-title">Buttons example</h4>
                 
 
-                    </div>
+                <table id="datatable-buttons" class="table table-bordered dt-responsive nowrap w-100">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Office</th>
+                        <th>Age</th>
+                        <th>Start date</th>
+                        <th>Salary</th>
+                        <th>Salar</th>
+                        <th>Salarp</th>
+                        <th>Sarp</th>
+                        <th>Sap</th>
+                        <th>Sa</th>
+                        <th>Ssfafasda</th>
+                    </tr>
+                    </thead>
 
-                </div>
 
-            </div>
+                    <tbody>
+                    <tr>
+                        <td>Tiger Nixon</td>
+                        <td>System Architect</td>
+                        <td>Edinburgh</td>
+                        <td>61</td>
+                        <td>2011/04/25</td>
+                        <td>$320,800</td>
+                        <td>$320,900</td>
+                        <td>$320,9</td>
+                        <td>$3209</td>
+                        <td>$329</td>
+                        <td>$39</td>
+                        <td>$3946767</td>
+                    </tr>
+                           
+                </tbody>
+            </table>
         </div>
-    </div> <!-- end col -->
+    </div>
+</div> <!-- end col -->
 </div> <!-- end row -->
+
+</div> <!-- container-fluid -->
+</div>
+<div class="rightbar-overlay"></div>
+
+<!-- JAVASCRIPT -->
+<script src="assets/libs/jquery/jquery.min.js"></script>
+<script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/libs/metismenu/metisMenu.min.js"></script>
+<script src="assets/libs/simplebar/simplebar.min.js"></script>
+<script src="assets/libs/node-waves/waves.min.js"></script>
+
+<!-- Required datatable js -->
+<script src="assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
+<script src="assets/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
+<!-- Buttons examples -->
+<script src="assets/libs/datatables.net-buttons/js/dataTables.buttons.min.js"></script>
+<script src="assets/libs/datatables.net-buttons-bs4/js/buttons.bootstrap4.min.js"></script>
+<script src="assets/libs/jszip/jszip.min.js"></script>
+<script src="assets/libs/pdfmake/build/pdfmake.min.js"></script>
+<script src="assets/libs/pdfmake/build/vfs_fonts.js"></script>
+<script src="assets/libs/datatables.net-buttons/js/buttons.html5.min.js"></script>
+<script src="assets/libs/datatables.net-buttons/js/buttons.print.min.js"></script>
+<script src="assets/libs/datatables.net-buttons/js/buttons.colVis.min.js"></script>
+
+<!-- Responsive examples -->
+<script src="assets/libs/datatables.net-responsive/js/dataTables.responsive.min.js"></script>
+<script src="assets/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js"></script>
+
+<!-- Datatable init js -->
+<script src="assets/js/pages/datatables.init.js"></script>    
+
+<script src="assets/js/app.js"></script>
+
+
+
 {% endblock %}

@@ -63,6 +63,16 @@
     min-height: 40px;
     background-color: #fff;
 }
+.tag-container {
+    flex: 1; /* Allow it to expand in the wrapper */
+    width: 100%; /* Ensure it takes full width */
+    min-height: 100px; /* Increase the minimum height */
+    padding: 10px; /* Add padding inside the box */
+    border: 1px solid #ccc; /* Keep the border */
+    border-radius: 4px; /* Maintain rounded corners */
+    background-color: #fff; /* Background color */
+    overflow-y: auto; /* Allow scrolling if content overflows */
+}
 
 .tag {
     display: flex;
@@ -97,6 +107,15 @@
 
 .tag-container input::placeholder {
     color: #aaa;
+}
+.tag-wrapper {
+    display: flex; /* Align children in a row */
+    align-items: center; /* Vertically center items */
+    gap: 8px; /* Add spacing between items */
+}
+
+.tag-container {
+    flex: 1; /* Allow the tag container to take available width */
 }
 </style>
 
@@ -194,6 +213,9 @@
     function createTagInput(field, terms, container) {
         if (document.getElementById(`tag-container-${field}`)) return;
 
+        const wrapper = document.createElement('div'); // New wrapper for the tag container and delete button
+        wrapper.className = 'tag-wrapper d-flex align-items-center mb-2'; // Assign wrapper styles
+
         const label = document.createElement('label');
         label.textContent = `${field}:`;
         label.className = 'form-label';
@@ -229,7 +251,7 @@
         const deleteButton = document.createElement('button');
         deleteButton.type = 'button';
         deleteButton.className = 'btn btn-danger col-md-3';
-        deleteButton.textContent = 'Delete All';
+        deleteButton.textContent = 'Delete';
         deleteButton.id = `delete-btn-${field}`;
         deleteButton.addEventListener('click', function () {
             /**
@@ -256,9 +278,12 @@
             }
         });
 
+        
+        wrapper.appendChild(tagContainer);
+        wrapper.appendChild(deleteButton);
+
         container.appendChild(label);
-        container.appendChild(tagContainer);
-        container.appendChild(deleteButton);
+        container.appendChild(wrapper);
     }
 
     /**

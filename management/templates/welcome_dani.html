@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 {% load static %}
 
 <html lang="en">
@@ -48,21 +48,20 @@
 </head>
 <body>
     <!-- Header -->
-    {% comment %} <div class="header">
-        <div class="logo">My Website</div>
-        <div class="search-box">
-            <input type="search" placeholder="Search..." aria-label="Search">
-        </div>
-        <div class="profile">AnonymousUser</div>
-    </div> {% endcomment %}
     <div id="layout-wrapper">
-      {% include "includes/header.html" %}
+        {% include "includes/header.html" %}
 
-    <!-- Main Content -->
+        <!-- Main Content -->
         <div class="page-content">
             <div class="container-fluid">
 
-            
+                {% if error_message %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {{ error_message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
                 <div class="container mt-5">
                     <!-- Create Workspace Section -->
                     <div class="row justify-content-center mt-4">
@@ -75,20 +74,24 @@
                             </div>
                         </div>
                     </div>
-            <!-- Recently Created Workspaces Section -->
-            <div class="row justify-content-center mt-5">
-                <div class="col-md-8">
-                    <h3 class="text-center text-primary mb-4">Recently Created Workspaces</h3>
-                    <div class="list-group">
-                        {% for workspace in recent_workspaces %}
-                        <a href="{% url 'list_user_workspacesss' workspace.id %}" class="list-group-item list-group-item-action flex-column align-items-start">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h3 class="mb-1 text-primary text-center">{{ workspace.workspace_name }}</h3>
+
+                    <!-- Recently Created Workspaces Section -->
+                    <div class="row justify-content-center mt-5">
+                        <div class="col-md-8">
+                            <h3 class="text-center text-primary mb-4">Recently Created Workspaces</h3>
+                            <div class="list-group">
+                                {% for workspace in recent_workspaces %}
+                                <a href="{% url 'list_user_workspacesss' workspace.id %}" class="list-group-item list-group-item-action flex-column align-items-start">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h3 class="mb-1 text-primary text-center">{{ workspace.workspace_name }}</h3>
+                                    </div>
+                                </a>
+                                {% endfor %}
                             </div>
-                           </a>
-                        {% endfor %}
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
